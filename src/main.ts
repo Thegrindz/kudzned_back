@@ -21,12 +21,12 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ResponseSyncInterceptor());
 
   //CORS configuration
-  // app.enableCors({
-  //   origin: ['http://localhost:5173',
-  //     'http://localhost:5175',
-  //   'https://kudzned.vercel.app/'],
-  //   credentials: true,
-  // });
+  app.enableCors({
+    origin: ['http://localhost:5173',
+      'http://localhost:5175',
+    'https://kudzned.vercel.app'],
+    credentials: true,
+  });
 
   // Global prefix
   app.setGlobalPrefix('api/v1');
