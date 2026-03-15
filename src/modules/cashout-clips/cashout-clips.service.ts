@@ -1,14 +1,22 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 
-import { CashoutClip, CashoutClipStatus } from '../../database/entities/cashout-clip.entity';
-import { Product } from '../../database/entities/product.entity';
-import { ResponseService, StandardResponse } from '../../common/services/response.service';
-import { CloudinaryService } from '../../common/services/cloudinary.service';
-import { CreateCashoutClipDto } from './dto/create-cashout-clip.dto';
-import { UpdateCashoutClipDto } from './dto/update-cashout-clip.dto';
-import { CashoutClipQueryDto } from './dto/cashout-clip-query.dto';
+import {
+  CashoutClip,
+  CashoutClipStatus,
+} from "../../database/entities/cashout-clip.entity";
+import { Product } from "../../database/entities/product.entity";
+import {
+  ResponseService,
+  StandardResponse,
+} from "../../common/services/response.service";
+import { CloudinaryService } from "../../common/services/cloudinary.service";
+import { CreateCashoutClipDto } from "./dto/create-cashout-clip.dto";
+import { UpdateCashoutClipDto } from "./dto/update-cashout-clip.dto";
+import { CashoutClipQueryDto } from "./dto/cashout-clip-query.dto";
+import { NotificationsService } from "../notifications/notifications.service";
+import { NotificationType } from "../../database/entities/notification.entity";
 
 @Injectable()
 export class CashoutClipsService {
@@ -19,15 +27,20 @@ export class CashoutClipsService {
     private productRepository: Repository<Product>,
     private responseService: ResponseService,
     private cloudinaryService: CloudinaryService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async create(
     userId: string,
     createCashoutClipDto: CreateCashoutClipDto,
-    files?: { video?: Express.Multer.File[], thumbnail?: Express.Multer.File[] },
+    files?: {
+      video?: Express.Multer.File[];
+      thumbnail?: Express.Multer.File[];
+    },
   ): Promise<StandardResponse<CashoutClip>> {
     try {
-      const { product_id, video, thumbnail, ...clipData } = createCashoutClipDto;
+      const { product_id, video, thumbnail, ...clipData } =
+        createCashoutClipDto;
 
       // Check if product exists
       const product = await this.productRepository.findOne({
@@ -35,12 +48,12 @@ export class CashoutClipsService {
       });
 
       if (!product) {
-        return this.responseService.notFound('Product not found');
+        return this.responseService.notFound("Product not found");
       }
 
       // Upload video file (required)
       if (!files?.video || !files.video[0]) {
-        return this.responseService.badRequest('Video file is required');
+        return this.responseService.badRequest("Video file is required");
       }
 
       const videoFile = files.video[0];
@@ -48,14 +61,17 @@ export class CashoutClipsService {
       try {
         videoUploadResult = await this.cloudinaryService.uploadFile(
           videoFile,
-          'cashout-clips/videos',
-          { resource_type: 'video' }
+          "cashout-clips/videos",
+          { resource_type: "video" },
         );
       } catch (uploadError) {
-        console.error('Video upload error:', uploadError);
-        return this.responseService.internalServerError('Failed to upload video file', { 
-          error: uploadError.message 
-        });
+        console.error("Video upload error:", uploadError);
+        return this.responseService.internalServerError(
+          "Failed to upload video file",
+          {
+            error: uploadError.message,
+          },
+        );
       }
 
       // Upload thumbnail if provided, otherwise generate from video
@@ -64,18 +80,24 @@ export class CashoutClipsService {
         try {
           const thumbnailUploadResult = await this.cloudinaryService.uploadFile(
             files.thumbnail[0],
-            'cashout-clips/thumbnails'
+            "cashout-clips/thumbnails",
           );
           thumbnailUrl = thumbnailUploadResult.secure_url;
         } catch (uploadError) {
-          console.error('Thumbnail upload error:', uploadError);
-          return this.responseService.internalServerError('Failed to upload thumbnail', { 
-            error: uploadError.message 
-          });
+          console.error("Thumbnail upload error:", uploadError);
+          return this.responseService.internalServerError(
+            "Failed to upload thumbnail",
+            {
+              error: uploadError.message,
+            },
+          );
         }
       } else {
         // Generate thumbnail from video
-        thumbnailUrl = videoUploadResult.secure_url.replace('/video/upload/', '/video/upload/so_0,w_400,h_300,c_fill/');
+        thumbnailUrl = videoUploadResult.secure_url.replace(
+          "/video/upload/",
+          "/video/upload/so_0,w_400,h_300,c_fill/",
+        );
       }
 
       // Create cashout clip
@@ -93,12 +115,27 @@ export class CashoutClipsService {
       // Fetch complete clip with relations
       const completeClip = await this.cashoutClipRepository.findOne({
         where: { id: savedClip.id },
-        relations: ['user', 'product'],
+        relations: ["user", "product"],
       });
 
-      return this.responseService.created('Cashout clip created successfully', completeClip);
+      // Send in-app notification
+      await this.notificationsService.createNotification({
+        user_id: userId,
+        type: NotificationType.CASHOUT_CLIP_CREATED,
+        title: "Cashout Clip Submitted",
+        message: "Your cashout clip has been successfully submitted.",
+        skipEmail: true,
+      });
+
+      return this.responseService.created(
+        "Cashout clip created successfully",
+        completeClip,
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to create cashout clip', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to create cashout clip",
+        { error: error.message },
+      );
     }
   }
 
@@ -115,54 +152,58 @@ export class CashoutClipsService {
         max_amount,
         search,
         tags,
-        sort_by = 'created_at',
-        sort_order = 'DESC',
+        sort_by = "created_at",
+        sort_order = "DESC",
         is_featured,
       } = query;
 
       const queryBuilder = this.cashoutClipRepository
-        .createQueryBuilder('clip')
-        .leftJoinAndSelect('clip.user', 'user')
-        .leftJoinAndSelect('clip.product', 'product')
-        .where('clip.is_deleted = :isDeleted', { isDeleted: false });
+        .createQueryBuilder("clip")
+        .leftJoinAndSelect("clip.user", "user")
+        .leftJoinAndSelect("clip.product", "product")
+        .where("clip.is_deleted = :isDeleted", { isDeleted: false });
 
       if (status) {
-        queryBuilder.andWhere('clip.status = :status', { status });
+        queryBuilder.andWhere("clip.status = :status", { status });
       }
 
       if (product_id) {
-        queryBuilder.andWhere('clip.product_id = :product_id', { product_id });
+        queryBuilder.andWhere("clip.product_id = :product_id", { product_id });
       }
 
       if (user_id) {
-        queryBuilder.andWhere('clip.user_id = :user_id', { user_id });
+        queryBuilder.andWhere("clip.user_id = :user_id", { user_id });
       }
 
       if (cashout_type) {
-        queryBuilder.andWhere('clip.cashout_type = :cashout_type', { cashout_type });
+        queryBuilder.andWhere("clip.cashout_type = :cashout_type", {
+          cashout_type,
+        });
       }
 
       if (min_amount) {
-        queryBuilder.andWhere('clip.amount >= :min_amount', { min_amount });
+        queryBuilder.andWhere("clip.amount >= :min_amount", { min_amount });
       }
 
       if (max_amount) {
-        queryBuilder.andWhere('clip.amount <= :max_amount', { max_amount });
+        queryBuilder.andWhere("clip.amount <= :max_amount", { max_amount });
       }
 
       if (search) {
         queryBuilder.andWhere(
-          '(clip.title ILIKE :search OR clip.description ILIKE :search)',
-          { search: `%${search}%` }
+          "(clip.title ILIKE :search OR clip.description ILIKE :search)",
+          { search: `%${search}%` },
         );
       }
 
       if (tags && tags.length > 0) {
-        queryBuilder.andWhere('clip.tags && :tags', { tags });
+        queryBuilder.andWhere("clip.tags && :tags", { tags });
       }
 
       if (is_featured !== undefined) {
-        queryBuilder.andWhere('clip.is_featured = :is_featured', { is_featured });
+        queryBuilder.andWhere("clip.is_featured = :is_featured", {
+          is_featured,
+        });
       }
 
       queryBuilder
@@ -172,9 +213,18 @@ export class CashoutClipsService {
 
       const [clips, total] = await queryBuilder.getManyAndCount();
 
-      return this.responseService.paginated(clips, page, limit, total, 'Cashout clips retrieved successfully');
+      return this.responseService.paginated(
+        clips,
+        page,
+        limit,
+        total,
+        "Cashout clips retrieved successfully",
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to retrieve cashout clips', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to retrieve cashout clips",
+        { error: error.message },
+      );
     }
   }
 
@@ -182,16 +232,22 @@ export class CashoutClipsService {
     try {
       const clip = await this.cashoutClipRepository.findOne({
         where: { id, is_deleted: false },
-        relations: ['user', 'product'],
+        relations: ["user", "product"],
       });
 
       if (!clip) {
-        return this.responseService.notFound('Cashout clip not found');
+        return this.responseService.notFound("Cashout clip not found");
       }
 
-      return this.responseService.success('Cashout clip retrieved successfully', clip);
+      return this.responseService.success(
+        "Cashout clip retrieved successfully",
+        clip,
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to retrieve cashout clip', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to retrieve cashout clip",
+        { error: error.message },
+      );
     }
   }
 
@@ -199,7 +255,10 @@ export class CashoutClipsService {
     id: string,
     userId: string,
     updateCashoutClipDto: UpdateCashoutClipDto,
-    files?: { video?: Express.Multer.File[], thumbnail?: Express.Multer.File[] },
+    files?: {
+      video?: Express.Multer.File[];
+      thumbnail?: Express.Multer.File[];
+    },
   ): Promise<StandardResponse<CashoutClip>> {
     try {
       const clipResponse = await this.findById(id);
@@ -211,7 +270,9 @@ export class CashoutClipsService {
 
       // Check if user owns the clip
       if (clip.user_id !== userId) {
-        return this.responseService.forbidden('You can only update your own cashout clips');
+        return this.responseService.forbidden(
+          "You can only update your own cashout clips",
+        );
       }
 
       const { video, thumbnail, ...clipData } = updateCashoutClipDto;
@@ -222,14 +283,17 @@ export class CashoutClipsService {
         const videoFile = files.video[0];
         const videoUploadResult = await this.cloudinaryService.uploadFile(
           videoFile,
-          'cashout-clips/videos',
-          { resource_type: 'video' }
+          "cashout-clips/videos",
+          { resource_type: "video" },
         );
         updateData.video_url = videoUploadResult.secure_url;
 
         // Generate new thumbnail from new video if no thumbnail provided
         if (!files?.thumbnail || !files.thumbnail[0]) {
-          updateData.thumbnail_url = videoUploadResult.secure_url.replace('/video/upload/', '/video/upload/so_0,w_400,h_300,c_fill/');
+          updateData.thumbnail_url = videoUploadResult.secure_url.replace(
+            "/video/upload/",
+            "/video/upload/so_0,w_400,h_300,c_fill/",
+          );
         }
       }
 
@@ -237,7 +301,7 @@ export class CashoutClipsService {
       if (files?.thumbnail && files.thumbnail[0]) {
         const thumbnailUploadResult = await this.cloudinaryService.uploadFile(
           files.thumbnail[0],
-          'cashout-clips/thumbnails'
+          "cashout-clips/thumbnails",
         );
         updateData.thumbnail_url = thumbnailUploadResult.secure_url;
       }
@@ -248,9 +312,15 @@ export class CashoutClipsService {
       await this.cashoutClipRepository.update(id, updateData);
 
       const updatedClipResponse = await this.findById(id);
-      return this.responseService.success('Cashout clip updated successfully', updatedClipResponse.data);
+      return this.responseService.success(
+        "Cashout clip updated successfully",
+        updatedClipResponse.data,
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to update cashout clip', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to update cashout clip",
+        { error: error.message },
+      );
     }
   }
 
@@ -265,15 +335,22 @@ export class CashoutClipsService {
 
       // Check if user owns the clip
       if (clip.user_id !== userId) {
-        return this.responseService.forbidden('You can only delete your own cashout clips');
+        return this.responseService.forbidden(
+          "You can only delete your own cashout clips",
+        );
       }
 
       // Soft delete
       await this.cashoutClipRepository.update(id, { is_deleted: true });
 
-      return this.responseService.success('Cashout clip deleted successfully', { success: true });
+      return this.responseService.success("Cashout clip deleted successfully", {
+        success: true,
+      });
     } catch (error) {
-      return this.responseService.internalServerError('Failed to delete cashout clip', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to delete cashout clip",
+        { error: error.message },
+      );
     }
   }
 
@@ -284,11 +361,16 @@ export class CashoutClipsService {
         return clipResponse;
       }
 
-      await this.cashoutClipRepository.increment({ id }, 'views_count', 1);
+      await this.cashoutClipRepository.increment({ id }, "views_count", 1);
 
-      return this.responseService.success('Views incremented successfully', { success: true });
+      return this.responseService.success("Views incremented successfully", {
+        success: true,
+      });
     } catch (error) {
-      return this.responseService.internalServerError('Failed to increment views', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to increment views",
+        { error: error.message },
+      );
     }
   }
 
@@ -301,11 +383,15 @@ export class CashoutClipsService {
 
       // For simplicity, we'll just increment likes
       // In a real implementation, you'd want a separate likes table to track who liked what
-      await this.cashoutClipRepository.increment({ id }, 'likes_count', 1);
+      await this.cashoutClipRepository.increment({ id }, "likes_count", 1);
 
-      return this.responseService.success('Like toggled successfully', { success: true });
+      return this.responseService.success("Like toggled successfully", {
+        success: true,
+      });
     } catch (error) {
-      return this.responseService.internalServerError('Failed to toggle like', { error: error.message });
+      return this.responseService.internalServerError("Failed to toggle like", {
+        error: error.message,
+      });
     }
   }
 
@@ -317,18 +403,27 @@ export class CashoutClipsService {
           is_featured: true,
           is_deleted: false,
         },
-        relations: ['user', 'product'],
-        order: { views_count: 'DESC', likes_count: 'DESC' },
+        relations: ["user", "product"],
+        order: { views_count: "DESC", likes_count: "DESC" },
         take: limit,
       });
 
-      return this.responseService.success('Featured cashout clips retrieved successfully', clips);
+      return this.responseService.success(
+        "Featured cashout clips retrieved successfully",
+        clips,
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to retrieve featured clips', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to retrieve featured clips",
+        { error: error.message },
+      );
     }
   }
 
-  async getProductClips(productId: string, limit = 10): Promise<StandardResponse<CashoutClip[]>> {
+  async getProductClips(
+    productId: string,
+    limit = 10,
+  ): Promise<StandardResponse<CashoutClip[]>> {
     try {
       const clips = await this.cashoutClipRepository.find({
         where: {
@@ -336,19 +431,29 @@ export class CashoutClipsService {
           status: CashoutClipStatus.APPROVED,
           is_deleted: false,
         },
-        relations: ['user'],
-        order: { views_count: 'DESC', created_at: 'DESC' },
+        relations: ["user"],
+        order: { views_count: "DESC", created_at: "DESC" },
         take: limit,
       });
 
-      return this.responseService.success('Product cashout clips retrieved successfully', clips);
+      return this.responseService.success(
+        "Product cashout clips retrieved successfully",
+        clips,
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to retrieve product clips', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to retrieve product clips",
+        { error: error.message },
+      );
     }
   }
 
   // Admin methods
-  async moderateClip(id: string, status: CashoutClipStatus, rejectionReason?: string): Promise<StandardResponse<CashoutClip>> {
+  async moderateClip(
+    id: string,
+    status: CashoutClipStatus,
+    rejectionReason?: string,
+  ): Promise<StandardResponse<CashoutClip>> {
     try {
       const clipResponse = await this.findById(id);
       if (!clipResponse.success) {
@@ -363,9 +468,44 @@ export class CashoutClipsService {
       await this.cashoutClipRepository.update(id, updateData);
 
       const updatedClipResponse = await this.findById(id);
-      return this.responseService.success('Cashout clip moderated successfully', updatedClipResponse.data);
+      const updatedClip = updatedClipResponse.data;
+
+      // Send in-app notification about moderation status
+      if (
+        status === CashoutClipStatus.APPROVED ||
+        status === CashoutClipStatus.REJECTED
+      ) {
+        const type =
+          status === CashoutClipStatus.APPROVED
+            ? NotificationType.CASHOUT_CLIP_APPROVED
+            : NotificationType.CASHOUT_CLIP_REJECTED;
+        const title =
+          status === CashoutClipStatus.APPROVED
+            ? "Cashout Clip Approved"
+            : "Cashout Clip Rejected";
+        const message =
+          status === CashoutClipStatus.APPROVED
+            ? "Your cashout clip has been approved and is now live."
+            : `Your cashout clip has been rejected.${rejectionReason ? " Reason: " + rejectionReason : ""}`;
+
+        await this.notificationsService.createNotification({
+          user_id: updatedClip.user_id,
+          type,
+          title,
+          message,
+          skipEmail: true,
+        });
+      }
+
+      return this.responseService.success(
+        "Cashout clip moderated successfully",
+        updatedClipResponse.data,
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to moderate cashout clip', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to moderate cashout clip",
+        { error: error.message },
+      );
     }
   }
 
@@ -377,12 +517,20 @@ export class CashoutClipsService {
       }
 
       const clip = clipResponse.data;
-      await this.cashoutClipRepository.update(id, { is_featured: !clip.is_featured });
+      await this.cashoutClipRepository.update(id, {
+        is_featured: !clip.is_featured,
+      });
 
       const updatedClipResponse = await this.findById(id);
-      return this.responseService.success('Featured status toggled successfully', updatedClipResponse.data);
+      return this.responseService.success(
+        "Featured status toggled successfully",
+        updatedClipResponse.data,
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to toggle featured status', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to toggle featured status",
+        { error: error.message },
+      );
     }
   }
 }
