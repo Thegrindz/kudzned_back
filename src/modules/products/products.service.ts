@@ -257,6 +257,11 @@ export class ProductsService {
 
       const { image, additional_images, digital_file, tags, ...productData } = updateProductDto;
       
+      // Filter out undefined values from productData
+      const filteredProductData = Object.fromEntries(
+        Object.entries(productData).filter(([_, v]) => v !== undefined)
+      );
+      
       // Process tags if provided
       let processedTags: string[] | undefined;
       if (tags !== undefined) {
@@ -314,7 +319,7 @@ export class ProductsService {
 
       // Prepare update data
       const updateData: any = {
-        ...productData,
+        ...filteredProductData,
         ...(processedTags && { tags: processedTags }),
         ...(updatedImages.length > 0 && { images: updatedImages }),
       };

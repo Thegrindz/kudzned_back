@@ -193,7 +193,7 @@ export class ProductsController {
     description: 'Insufficient permissions - Admin access required'
   })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.VENDOR)
   @UseInterceptors(FileFieldsInterceptor([
     { name: 'image', maxCount: 1 },
     { name: 'additional_images', maxCount: 5 },
@@ -255,7 +255,7 @@ export class ProductsController {
     description: 'Product not found'
   })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.VENDOR)
   @UseInterceptors(FileFieldsInterceptor([
     { name: 'image', maxCount: 1 },
     { name: 'additional_images', maxCount: 5 },
@@ -294,7 +294,7 @@ export class ProductsController {
     description: 'Product not found'
   })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.VENDOR)
   async deleteProduct(@Param('id') id: string, @Req() req: any) {
     return this.productsService.delete(id, req.user.id, req.user.role);
   }
