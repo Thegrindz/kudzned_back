@@ -20,7 +20,7 @@ export class BTCAddress {
   @Column({ unique: true })
   address: string;
 
-  @Column()
+  @Column({ nullable: true })
   private_key: string; // Encrypted
 
   @Column({ default: false })

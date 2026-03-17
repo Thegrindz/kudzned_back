@@ -83,16 +83,25 @@ export class TatumService {
   }
 
   async createSubscription(address: string, chain: "BTC" | "ETH") {
+    const backendUrl = this.configService.get<string>("BACKEND_URL");
+    
+    // Tatum webhooks cannot be sent to localhost. 
+    // If you're testing locally, use a tool like ngrok to get a public URL.
+    if (!backendUrl || backendUrl.includes("localhost") || backendUrl.includes("127.0.0.1")) {
+      this.logger.warn(`Skipping Tatum subscription for ${address} because BACKEND_URL is set to localhost. Webhooks require a publicly accessible URL.`);
+      return { skipped: true, reason: "localhost_not_supported" };
+    }
+
     try {
       const response = await firstValueFrom(
         this.httpService.post(
-          `${this.baseUrlV4}/subscription/subscription`,
+          `${this.baseUrlV3}/subscription`,
           {
             type: "ADDRESS_TRANSACTION",
             attr: {
               address,
               chain,
-              url: `${this.configService.get("BACKEND_URL")}/wallets/webhooks/tatum`,
+              url: `${backendUrl}/api/v1/wallets/webhooks/tatum`,
             },
           },
           {
@@ -103,6 +112,9 @@ export class TatumService {
       return response.data;
     } catch (error) {
       this.logger.error(`Failed to create subscription: ${error.message}`);
+      if (error.response) {
+        this.logger.error(`Error details: ${JSON.stringify(error.response.data)}`);
+      }
       throw error;
     }
   }
