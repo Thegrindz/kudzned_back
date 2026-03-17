@@ -6,7 +6,7 @@ import { AppModule } from './app.module';
 import { ResponseSyncInterceptor } from './common/interceptors/response.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   const configService = app.get(ConfigService);
 
@@ -59,7 +59,7 @@ async function bootstrap() {
     },
   });
 
-  const port = configService.get('PORT') || 3000;
+  const port = configService.get('PORT') || 3100;
   await app.listen(port);
 
   console.log(`🚀 KUDZNED Backend running on port ${port}`);

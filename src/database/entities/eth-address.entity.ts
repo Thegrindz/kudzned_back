@@ -6,21 +6,21 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
-} from 'typeorm';
-import { Wallet } from './wallet.entity';
+} from "typeorm";
+import { Wallet } from "./wallet.entity";
 
-@Entity('btc_addresses')
-export class BTCAddress {
-  @PrimaryGeneratedColumn('uuid')
+@Entity("eth_addresses")
+export class ETHAddress {
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column('uuid')
+  @Column("uuid")
   wallet_id: string;
 
   @Column({ unique: true })
   address: string;
 
-  @Column()
+  @Column({ nullable: true })
   private_key: string; // Encrypted
 
   @Column({ default: false })
@@ -29,7 +29,7 @@ export class BTCAddress {
   @Column({ default: true })
   is_active: boolean;
 
-   @Column({ default: true })
+  @Column({ default: true })
   is_monitored:boolean
 
   @CreateDateColumn()
@@ -39,7 +39,7 @@ export class BTCAddress {
   updated_at: Date;
 
   // Relations
-  @ManyToOne(() => Wallet, wallet => wallet.btc_addresses)
-  @JoinColumn({ name: 'wallet_id' })
+  @ManyToOne(() => Wallet, (wallet) => wallet.eth_addresses)
+  @JoinColumn({ name: "wallet_id" })
   wallet: Wallet;
 }

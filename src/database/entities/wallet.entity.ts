@@ -7,29 +7,30 @@ import {
   OneToOne,
   OneToMany,
   JoinColumn,
-} from 'typeorm';
-import { User } from './user.entity';
-import { Transaction } from './transaction.entity';
-import { BTCAddress } from './btc-address.entity';
+} from "typeorm";
+import { User } from "./user.entity";
+import { Transaction } from "./transaction.entity";
+import { BTCAddress } from "./btc-address.entity";
+import { ETHAddress } from "./eth-address.entity";
 
-@Entity('wallets')
+@Entity("wallets")
 export class Wallet {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column('uuid')
+  @Column("uuid")
   user_id: string;
 
-  @Column('bigint', { default: 0 })
+  @Column("bigint", { default: 0 })
   balance: number; // in satoshis
 
-  @Column('bigint', { default: 0 })
+  @Column("bigint", { default: 0 })
   available_balance: number;
 
-  @Column('bigint', { default: 0 })
+  @Column("bigint", { default: 0 })
   total_deposited: number;
 
-  @Column('bigint', { default: 0 })
+  @Column("bigint", { default: 0 })
   total_withdrawn: number;
 
   @CreateDateColumn()
@@ -39,13 +40,16 @@ export class Wallet {
   updated_at: Date;
 
   // Relations
-  @OneToOne(() => User, user => user.wallet)
-  @JoinColumn({ name: 'user_id' })
+  @OneToOne(() => User, (user) => user.wallet)
+  @JoinColumn({ name: "user_id" })
   user: User;
 
-  @OneToMany(() => BTCAddress, address => address.wallet)
+  @OneToMany(() => BTCAddress, (address) => address.wallet)
   btc_addresses: BTCAddress[];
 
-  @OneToMany(() => Transaction, transaction => transaction.wallet)
+  @OneToMany(() => ETHAddress, (address) => address.wallet)
+  eth_addresses: ETHAddress[];
+
+  @OneToMany(() => Transaction, (transaction) => transaction.wallet)
   transactions: Transaction[];
 }

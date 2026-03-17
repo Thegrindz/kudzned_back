@@ -1,9 +1,12 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 
-import { Transaction } from '../../database/entities/transaction.entity';
-import { TransactionType, TransactionStatus } from '../../common/enums/transaction.enum';
+import { Transaction } from "../../database/entities/transaction.entity";
+import {
+  TransactionType,
+  TransactionStatus,
+} from "../../common/enums/transaction.enum";
 
 @Injectable()
 export class TransactionService {
@@ -18,6 +21,8 @@ export class TransactionService {
     amount: number;
     status?: TransactionStatus;
     btc_tx_hash?: string;
+    // FIX #5 — eth_tx_hash was missing from the createTransaction input type
+    eth_tx_hash?: string;
     order_id?: string;
     description?: string;
     metadata?: any;
@@ -50,14 +55,14 @@ export class TransactionService {
     type?: TransactionType,
   ) {
     const queryBuilder = this.transactionRepository
-      .createQueryBuilder('transaction')
-      .where('transaction.wallet_id = :walletId', { walletId })
-      .orderBy('transaction.created_at', 'DESC')
+      .createQueryBuilder("transaction")
+      .where("transaction.wallet_id = :walletId", { walletId })
+      .orderBy("transaction.created_at", "DESC")
       .skip((page - 1) * limit)
       .take(limit);
 
     if (type) {
-      queryBuilder.andWhere('transaction.type = :type', { type });
+      queryBuilder.andWhere("transaction.type = :type", { type });
     }
 
     const [transactions, total] = await queryBuilder.getManyAndCount();
@@ -74,10 +79,21 @@ export class TransactionService {
   }
 
   async getTransactionById(transactionId: string): Promise<Transaction> {
-    return this.transactionRepository.findOne({ where: { id: transactionId } });
+    return this.transactionRepository.findOne({
+      where: { id: transactionId },
+    });
   }
 
   async getTransactionByBTCHash(btcTxHash: string): Promise<Transaction> {
-    return this.transactionRepository.findOne({ where: { btc_tx_hash: btcTxHash } });
+    return this.transactionRepository.findOne({
+      where: { btc_tx_hash: btcTxHash },
+    });
+  }
+
+  // FIX #5 — ETH equivalent of getTransactionByBTCHash was missing entirely
+  async getTransactionByETHHash(ethTxHash: string): Promise<Transaction> {
+    return this.transactionRepository.findOne({
+      where: { eth_tx_hash: ethTxHash },
+    });
   }
 }
