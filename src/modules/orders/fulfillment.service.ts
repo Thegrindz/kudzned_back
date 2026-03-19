@@ -1,11 +1,14 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { randomBytes } from 'crypto';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { randomBytes } from "crypto";
 
-import { DownloadLink } from '../../database/entities/download-link.entity';
-import { Order } from '../../database/entities/order.entity';
-import { ResponseService, StandardResponse } from '../../common/services/response.service';
+import { DownloadLink } from "../../database/entities/download-link.entity";
+import { Order } from "../../database/entities/order.entity";
+import {
+  ResponseService,
+  StandardResponse,
+} from "../../common/services/response.service";
 
 @Injectable()
 export class FulfillmentService {
@@ -17,15 +20,17 @@ export class FulfillmentService {
     private responseService: ResponseService,
   ) {}
 
-  async fulfillOrder(orderId: string): Promise<{ success: boolean; error?: string }> {
+  async fulfillOrder(
+    orderId: string,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const order = await this.orderRepository.findOne({
         where: { id: orderId },
-        relations: ['items', 'items.product', 'items.product.digital_files'],
+        relations: ["items", "items.product", "items.product.digital_files"],
       });
 
       if (!order) {
-        return { success: false, error: 'Order not found' };
+        return { success: false, error: "Order not found" };
       }
 
       // Create download links for all digital files
@@ -51,7 +56,11 @@ export class FulfillmentService {
     }
   }
 
-  async getDownloadLink(orderId: string, fileId: string, userId: string): Promise<StandardResponse<any>> {
+  async getDownloadLink(
+    orderId: string,
+    fileId: string,
+    userId: string,
+  ): Promise<StandardResponse<any>> {
     try {
       // First verify the order belongs to the user
       const order = await this.orderRepository.findOne({
@@ -59,7 +68,9 @@ export class FulfillmentService {
       });
 
       if (!order) {
-        return this.responseService.notFound('Order not found or access denied');
+        return this.responseService.notFound(
+          "Order not found or access denied",
+        );
       }
 
       const downloadLink = await this.downloadLinkRepository.findOne({
@@ -68,21 +79,21 @@ export class FulfillmentService {
           digital_file_id: fileId,
           is_active: true,
         },
-        relations: ['digital_file'],
+        relations: ["digital_file"],
       });
 
       if (!downloadLink) {
-        return this.responseService.notFound('Download link not found');
+        return this.responseService.notFound("Download link not found");
       }
 
       // Check if link has expired
       if (downloadLink.expires_at < new Date()) {
-        return this.responseService.badRequest('Download link has expired');
+        return this.responseService.badRequest("Download link has expired");
       }
 
       // Check download limit
       if (downloadLink.download_count >= downloadLink.max_downloads) {
-        return this.responseService.badRequest('Download limit exceeded');
+        return this.responseService.badRequest("Download limit exceeded");
       }
 
       // Increment download count
@@ -90,38 +101,50 @@ export class FulfillmentService {
         download_count: downloadLink.download_count + 1,
       });
 
-      return this.responseService.success('Download link retrieved successfully', downloadLink);
+      return this.responseService.success(
+        "Download link retrieved successfully",
+        downloadLink,
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to get download link', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to get download link",
+        { error: error.message },
+      );
     }
   }
 
   private generateDownloadToken(): string {
-    return randomBytes(32).toString('hex');
+    return randomBytes(32).toString("hex");
   }
 
   async validateDownloadToken(token: string): Promise<StandardResponse<any>> {
     try {
       const downloadLink = await this.downloadLinkRepository.findOne({
         where: { token, is_active: true },
-        relations: ['digital_file', 'order'],
+        relations: ["digital_file", "order"],
       });
 
       if (!downloadLink) {
-        return this.responseService.notFound('Invalid download token');
+        return this.responseService.notFound("Invalid download token");
       }
 
       if (downloadLink.expires_at < new Date()) {
-        return this.responseService.badRequest('Download link has expired');
+        return this.responseService.badRequest("Download link has expired");
       }
 
       if (downloadLink.download_count >= downloadLink.max_downloads) {
-        return this.responseService.badRequest('Download limit exceeded');
+        return this.responseService.badRequest("Download limit exceeded");
       }
 
-      return this.responseService.success('Download token validated successfully', downloadLink);
+      return this.responseService.success(
+        "Download token validated successfully",
+        downloadLink,
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to validate download token', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to validate download token",
+        { error: error.message },
+      );
     }
   }
 }

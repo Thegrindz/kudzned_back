@@ -1,11 +1,19 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID, IsEnum, IsInt, IsString, Min, Max } from 'class-validator';
-import { Type } from 'class-transformer';
-import { VouchStatus, VouchTag } from '../../../database/entities/vouch.entity';
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  IsOptional,
+  IsUUID,
+  IsEnum,
+  IsInt,
+  IsString,
+  Min,
+  Max,
+} from "class-validator";
+import { Type } from "class-transformer";
+import { VouchStatus, VouchTag } from "../../../database/entities/vouch.entity";
 
 export class VouchQueryDto {
   @ApiPropertyOptional({
-    description: 'Page number for pagination',
+    description: "Page number for pagination",
     minimum: 1,
     default: 1,
     example: 1,
@@ -17,7 +25,7 @@ export class VouchQueryDto {
   page?: number = 1;
 
   @ApiPropertyOptional({
-    description: 'Number of items per page',
+    description: "Number of items per page",
     minimum: 1,
     maximum: 100,
     default: 20,
@@ -31,23 +39,23 @@ export class VouchQueryDto {
   limit?: number = 20;
 
   @ApiPropertyOptional({
-    description: 'Filter by product ID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: "Filter by product ID",
+    example: "123e4567-e89b-12d3-a456-426614174000",
   })
   @IsOptional()
   @IsUUID()
   product_id?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by user ID',
-    example: '123e4567-e89b-12d3-a456-426614174001',
+    description: "Filter by user ID",
+    example: "123e4567-e89b-12d3-a456-426614174001",
   })
   @IsOptional()
   @IsUUID()
   user_id?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by vouch status',
+    description: "Filter by vouch status",
     enum: VouchStatus,
     example: VouchStatus.APPROVED,
   })
@@ -56,7 +64,7 @@ export class VouchQueryDto {
   status?: VouchStatus;
 
   @ApiPropertyOptional({
-    description: 'Filter by minimum rating',
+    description: "Filter by minimum rating",
     minimum: 1,
     maximum: 5,
     example: 4,
@@ -69,7 +77,7 @@ export class VouchQueryDto {
   min_rating?: number;
 
   @ApiPropertyOptional({
-    description: 'Filter by maximum rating',
+    description: "Filter by maximum rating",
     minimum: 1,
     maximum: 5,
     example: 5,
@@ -82,7 +90,7 @@ export class VouchQueryDto {
   max_rating?: number;
 
   @ApiPropertyOptional({
-    description: 'Filter by tags',
+    description: "Filter by tags",
     enum: VouchTag,
     isArray: true,
     example: [VouchTag.FAST_DELIVERY, VouchTag.RELIABLE],
@@ -92,35 +100,35 @@ export class VouchQueryDto {
   tags?: VouchTag[];
 
   @ApiPropertyOptional({
-    description: 'Search in comments',
-    example: 'fast delivery',
+    description: "Search in comments",
+    example: "fast delivery",
   })
   @IsOptional()
   @IsString()
   search?: string;
 
   @ApiPropertyOptional({
-    description: 'Sort by field',
-    enum: ['created_at', 'rating', 'helpful_count'],
-    default: 'created_at',
-    example: 'created_at',
+    description: "Sort by field",
+    enum: ["created_at", "rating", "helpful_count"],
+    default: "created_at",
+    example: "created_at",
   })
   @IsOptional()
   @IsString()
-  sort_by?: string = 'created_at';
+  sort_by?: string = "created_at";
 
   @ApiPropertyOptional({
-    description: 'Sort order',
-    enum: ['ASC', 'DESC'],
-    default: 'DESC',
-    example: 'DESC',
+    description: "Sort order",
+    enum: ["ASC", "DESC"],
+    default: "DESC",
+    example: "DESC",
   })
   @IsOptional()
-  @IsEnum(['ASC', 'DESC'])
-  sort_order?: 'ASC' | 'DESC' = 'DESC';
+  @IsEnum(["ASC", "DESC"])
+  sort_order?: "ASC" | "DESC" = "DESC";
 
   @ApiPropertyOptional({
-    description: 'Filter by verified purchase only',
+    description: "Filter by verified purchase only",
     example: true,
   })
   @IsOptional()

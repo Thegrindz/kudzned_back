@@ -1,14 +1,14 @@
-import { Process, Processor } from '@nestjs/bull';
-import { Job } from 'bull';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Process, Processor } from "@nestjs/bull";
+import { Job } from "bull";
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 
-import { Notification } from '../../database/entities/notification.entity';
-import { User } from '../../database/entities/user.entity';
-import { EmailService } from './email.service';
+import { Notification } from "../../database/entities/notification.entity";
+import { User } from "../../database/entities/user.entity";
+import { EmailService } from "./email.service";
 
-@Processor('notifications')
+@Processor("notifications")
 @Injectable()
 export class NotificationProcessor {
   constructor(
@@ -19,14 +19,14 @@ export class NotificationProcessor {
     private emailService: EmailService,
   ) {}
 
-  @Process('send-email')
+  @Process("send-email")
   async handleSendEmail(job: Job<{ notificationId: string }>) {
     const { notificationId } = job.data;
 
     try {
       const notification = await this.notificationRepository.findOne({
         where: { id: notificationId },
-        relations: ['user'],
+        relations: ["user"],
       });
 
       if (!notification || notification.is_email_sent) {
@@ -45,9 +45,8 @@ export class NotificationProcessor {
       await this.notificationRepository.update(notificationId, {
         is_email_sent: true,
       });
-
     } catch (error) {
-      console.error('Failed to send notification email:', error);
+      console.error("Failed to send notification email:", error);
       throw error;
     }
   }

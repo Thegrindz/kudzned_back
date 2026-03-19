@@ -30,7 +30,7 @@ export class ETHAddress {
   is_active: boolean;
 
   @Column({ default: true })
-  is_monitored:boolean
+  is_monitored: boolean;
 
   @CreateDateColumn()
   created_at: Date;

@@ -6,19 +6,19 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
-} from 'typeorm';
-import { Order } from './order.entity';
-import { DigitalFile } from './digital-file.entity';
+} from "typeorm";
+import { Order } from "./order.entity";
+import { DigitalFile } from "./digital-file.entity";
 
-@Entity('download_links')
+@Entity("download_links")
 export class DownloadLink {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column('uuid')
+  @Column("uuid")
   order_id: string;
 
-  @Column('uuid')
+  @Column("uuid")
   digital_file_id: string;
 
   @Column({ unique: true })
@@ -43,11 +43,11 @@ export class DownloadLink {
   updated_at: Date;
 
   // Relations
-  @ManyToOne(() => Order, order => order.download_links)
-  @JoinColumn({ name: 'order_id' })
+  @ManyToOne(() => Order, (order) => order.download_links)
+  @JoinColumn({ name: "order_id" })
   order: Order;
 
   @ManyToOne(() => DigitalFile)
-  @JoinColumn({ name: 'digital_file_id' })
+  @JoinColumn({ name: "digital_file_id" })
   digital_file: DigitalFile;
 }

@@ -1,11 +1,14 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 
-import { Category } from '../../database/entities/category.entity';
-import { ResponseService, StandardResponse } from '../../common/services/response.service';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
+import { Category } from "../../database/entities/category.entity";
+import {
+  ResponseService,
+  StandardResponse,
+} from "../../common/services/response.service";
+import { CreateCategoryDto } from "./dto/create-category.dto";
+import { UpdateCategoryDto } from "./dto/update-category.dto";
 
 @Injectable()
 export class CategoryService {
@@ -19,12 +22,18 @@ export class CategoryService {
     try {
       const categories = await this.categoryRepository.find({
         where: { is_active: true },
-        order: { sort_order: 'ASC', name: 'ASC' },
+        order: { sort_order: "ASC", name: "ASC" },
       });
 
-      return this.responseService.success('Categories retrieved successfully', categories);
+      return this.responseService.success(
+        "Categories retrieved successfully",
+        categories,
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to retrieve categories', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to retrieve categories",
+        { error: error.message },
+      );
     }
   }
 
@@ -33,30 +42,46 @@ export class CategoryService {
       const category = await this.categoryRepository.findOne({ where: { id } });
 
       if (!category) {
-        return this.responseService.notFound('Category not found');
+        return this.responseService.notFound("Category not found");
       }
 
-      return this.responseService.success('Category retrieved successfully', category);
+      return this.responseService.success(
+        "Category retrieved successfully",
+        category,
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to retrieve category', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to retrieve category",
+        { error: error.message },
+      );
     }
   }
 
   async findBySlug(slug: string): Promise<StandardResponse<Category>> {
     try {
-      const category = await this.categoryRepository.findOne({ where: { slug } });
+      const category = await this.categoryRepository.findOne({
+        where: { slug },
+      });
 
       if (!category) {
-        return this.responseService.notFound('Category not found');
+        return this.responseService.notFound("Category not found");
       }
 
-      return this.responseService.success('Category retrieved successfully', category);
+      return this.responseService.success(
+        "Category retrieved successfully",
+        category,
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to retrieve category', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to retrieve category",
+        { error: error.message },
+      );
     }
   }
 
-  async create(createCategoryDto: CreateCategoryDto): Promise<StandardResponse<Category>> {
+  async create(
+    createCategoryDto: CreateCategoryDto,
+  ): Promise<StandardResponse<Category>> {
     try {
       const slug = this.generateSlug(createCategoryDto.name);
 
@@ -66,13 +91,22 @@ export class CategoryService {
       });
 
       const savedCategory = await this.categoryRepository.save(category);
-      return this.responseService.created('Category created successfully', savedCategory);
+      return this.responseService.created(
+        "Category created successfully",
+        savedCategory,
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to create category', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to create category",
+        { error: error.message },
+      );
     }
   }
 
-  async update(id: string, updateCategoryDto: UpdateCategoryDto): Promise<StandardResponse<Category>> {
+  async update(
+    id: string,
+    updateCategoryDto: UpdateCategoryDto,
+  ): Promise<StandardResponse<Category>> {
     try {
       const categoryResponse = await this.findById(id);
       if (!categoryResponse.success) {
@@ -82,19 +116,27 @@ export class CategoryService {
       const category = categoryResponse.data;
 
       if (updateCategoryDto.name && updateCategoryDto.name !== category.name) {
-        (updateCategoryDto as any).slug = this.generateSlug(updateCategoryDto.name);
+        (updateCategoryDto as any).slug = this.generateSlug(
+          updateCategoryDto.name,
+        );
       }
 
       await this.categoryRepository.update(id, updateCategoryDto);
       const updatedCategoryResponse = await this.findById(id);
 
       if (updatedCategoryResponse.success) {
-        return this.responseService.success('Category updated successfully', updatedCategoryResponse.data);
+        return this.responseService.success(
+          "Category updated successfully",
+          updatedCategoryResponse.data,
+        );
       }
 
       return updatedCategoryResponse;
     } catch (error) {
-      return this.responseService.internalServerError('Failed to update category', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to update category",
+        { error: error.message },
+      );
     }
   }
 
@@ -106,18 +148,23 @@ export class CategoryService {
       }
 
       await this.categoryRepository.delete(id);
-      return this.responseService.success('Category deleted successfully', { success: true });
+      return this.responseService.success("Category deleted successfully", {
+        success: true,
+      });
     } catch (error) {
-      return this.responseService.internalServerError('Failed to delete category', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to delete category",
+        { error: error.message },
+      );
     }
   }
 
   private generateSlug(name: string): string {
     return name
       .toLowerCase()
-      .replace(/[^a-z0-9 -]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
+      .replace(/[^a-z0-9 -]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
       .trim();
   }
 }

@@ -83,13 +83,25 @@ export class TatumService {
   }
 
   async createSubscription(address: string, chain: "BTC" | "ETH") {
-    const backendUrl = this.configService.get<string>("BACKEND_URL");
-    
-    // Tatum webhooks cannot be sent to localhost. 
-    // If you're testing locally, use a tool like ngrok to get a public URL.
-    if (!backendUrl || backendUrl.includes("localhost") || backendUrl.includes("127.0.0.1")) {
-      this.logger.warn(`Skipping Tatum subscription for ${address} because BACKEND_URL is set to localhost. Webhooks require a publicly accessible URL.`);
-      return { skipped: true, reason: "localhost_not_supported" };
+    const backendUrlRaw = this.configService.get<string>("BACKEND_URL");
+    const backendUrl = (backendUrlRaw || "").trim().replace(/\/+$/, "");
+
+    if (!backendUrl) {
+      this.logger.warn(
+        `Skipping Tatum subscription for ${address} because BACKEND_URL is not configured.`,
+      );
+      return { skipped: true, reason: "backend_url_missing" };
+    }
+
+    if (
+      backendUrl.includes("localhost") ||
+      backendUrl.includes("127.0.0.1") ||
+      !/^https:\/\/.+/i.test(backendUrl)
+    ) {
+      this.logger.warn(
+        `Skipping Tatum subscription for ${address} because BACKEND_URL must be a publicly reachable https URL. Current BACKEND_URL: ${backendUrl}`,
+      );
+      return { skipped: true, reason: "backend_url_invalid" };
     }
 
     try {
@@ -113,7 +125,9 @@ export class TatumService {
     } catch (error) {
       this.logger.error(`Failed to create subscription: ${error.message}`);
       if (error.response) {
-        this.logger.error(`Error details: ${JSON.stringify(error.response.data)}`);
+        this.logger.error(
+          `Error details: ${JSON.stringify(error.response.data)}`,
+        );
       }
       throw error;
     }

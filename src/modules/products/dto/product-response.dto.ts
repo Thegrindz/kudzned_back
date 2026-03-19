@@ -1,19 +1,19 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty } from "@nestjs/swagger";
 
 export class CategoryResponseDto {
-  @ApiProperty({ example: 'uuid-string' })
+  @ApiProperty({ example: "uuid-string" })
   id: string;
 
-  @ApiProperty({ example: 'E-books' })
+  @ApiProperty({ example: "E-books" })
   name: string;
 
-  @ApiProperty({ example: 'e-books' })
+  @ApiProperty({ example: "e-books" })
   slug: string;
 
-  @ApiProperty({ example: 'Digital books and publications' })
+  @ApiProperty({ example: "Digital books and publications" })
   description: string;
 
-  @ApiProperty({ example: 'https://example.com/image.jpg', required: false })
+  @ApiProperty({ example: "https://example.com/image.jpg", required: false })
   image_url?: string;
 
   @ApiProperty({ example: true })
@@ -21,36 +21,47 @@ export class CategoryResponseDto {
 }
 
 export class VendorResponseDto {
-  @ApiProperty({ example: 'uuid-string' })
+  @ApiProperty({ example: "uuid-string" })
   id: string;
 
-  @ApiProperty({ example: 'vendor1' })
+  @ApiProperty({ example: "vendor1" })
   username: string;
 }
 
 export class ProductResponseDto {
-  @ApiProperty({ example: 'uuid-string' })
+  @ApiProperty({ example: "uuid-string" })
   id: string;
 
-  @ApiProperty({ example: 'Amazing E-book' })
+  @ApiProperty({ example: "Amazing E-book" })
   title: string;
 
-  @ApiProperty({ example: 'A comprehensive guide to digital marketing' })
+  @ApiProperty({ example: "A comprehensive guide to digital marketing" })
   description: string;
 
-  @ApiProperty({ example: 50000, description: 'Price in satoshis' })
+  @ApiProperty({ example: 50000, description: "Price in satoshis" })
   price: number;
 
-  @ApiProperty({ example: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'] })
+  @ApiProperty({
+    example: [
+      "https://example.com/image1.jpg",
+      "https://example.com/image2.jpg",
+    ],
+  })
   images: string[];
 
-  @ApiProperty({ example: ['ebook', 'marketing', 'digital'] })
+  @ApiProperty({ example: ["ebook", "marketing", "digital"] })
   tags: string[];
 
-  @ApiProperty({ example: 'active', enum: ['draft', 'active', 'inactive', 'archived'] })
+  @ApiProperty({
+    example: "active",
+    enum: ["draft", "active", "inactive", "archived"],
+  })
   status: string;
 
-  @ApiProperty({ example: 'in_stock', enum: ['in_stock', 'out_of_stock', 'discontinued'] })
+  @ApiProperty({
+    example: "in_stock",
+    enum: ["in_stock", "out_of_stock", "discontinued"],
+  })
   availability: string;
 
   @ApiProperty({ example: 150 })
@@ -68,10 +79,10 @@ export class ProductResponseDto {
   @ApiProperty({ type: VendorResponseDto })
   vendor: VendorResponseDto;
 
-  @ApiProperty({ example: '2024-01-01T00:00:00.000Z' })
+  @ApiProperty({ example: "2024-01-01T00:00:00.000Z" })
   created_at: string;
 
-  @ApiProperty({ example: '2024-01-01T00:00:00.000Z' })
+  @ApiProperty({ example: "2024-01-01T00:00:00.000Z" })
   updated_at: string;
 }
 
@@ -86,8 +97,8 @@ export class ProductListResponseDto {
       total: 100,
       pages: 5,
       hasNext: true,
-      hasPrev: false
-    }
+      hasPrev: false,
+    },
   })
   pagination: {
     page: number;

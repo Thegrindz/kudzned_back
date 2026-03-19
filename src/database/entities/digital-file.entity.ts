@@ -6,15 +6,15 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
-} from 'typeorm';
-import { Product } from './product.entity';
+} from "typeorm";
+import { Product } from "./product.entity";
 
-@Entity('digital_files')
+@Entity("digital_files")
 export class DigitalFile {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column('uuid')
+  @Column("uuid")
   product_id: string;
 
   @Column()
@@ -42,7 +42,7 @@ export class DigitalFile {
   updated_at: Date;
 
   // Relations
-  @ManyToOne(() => Product, product => product.digital_files)
-  @JoinColumn({ name: 'product_id' })
+  @ManyToOne(() => Product, (product) => product.digital_files)
+  @JoinColumn({ name: "product_id" })
   product: Product;
 }

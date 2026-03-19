@@ -1,19 +1,26 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 
-import { Order } from '../../database/entities/order.entity';
-import { OrderItem } from '../../database/entities/order-item.entity';
-import { OrderStatus, PaymentStatus, FulfillmentStatus } from '../../common/enums/order.enum';
-import { ResponseService, StandardResponse } from '../../common/services/response.service';
+import { Order } from "../../database/entities/order.entity";
+import { OrderItem } from "../../database/entities/order-item.entity";
+import {
+  OrderStatus,
+  PaymentStatus,
+  FulfillmentStatus,
+} from "../../common/enums/order.enum";
+import {
+  ResponseService,
+  StandardResponse,
+} from "../../common/services/response.service";
 
-import { WalletsService } from '../wallets/wallets.service';
-import { ProductsService } from '../products/products.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { FulfillmentService } from './fulfillment.service';
+import { WalletsService } from "../wallets/wallets.service";
+import { ProductsService } from "../products/products.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { FulfillmentService } from "./fulfillment.service";
 
-import { CreateOrderDto } from './dto/create-order.dto';
-import { OrderQueryDto } from './dto/order-query.dto';
+import { CreateOrderDto } from "./dto/create-order.dto";
+import { OrderQueryDto } from "./dto/order-query.dto";
 
 interface ValidatedItem {
   productId: string;
@@ -36,16 +43,24 @@ export class OrdersService {
     private responseService: ResponseService,
   ) {}
 
-  async createOrder(userId: string, createOrderDto: CreateOrderDto): Promise<StandardResponse<Order>> {
+  async createOrder(
+    userId: string,
+    createOrderDto: CreateOrderDto,
+  ): Promise<StandardResponse<Order>> {
     try {
       return await this.orderRepository.manager.transaction(async (manager) => {
         // 1. Validate cart items and calculate total
-        const { items, totalAmount } = await this.validateCartItems(createOrderDto.items);
+        const { items, totalAmount } = await this.validateCartItems(
+          createOrderDto.items,
+        );
 
         // 2. Check wallet balance
-        const hasBalance = await this.walletsService.checkBalance(userId, totalAmount);
+        const hasBalance = await this.walletsService.checkBalance(
+          userId,
+          totalAmount,
+        );
         if (!hasBalance) {
-          return this.responseService.badRequest('Insufficient wallet balance');
+          return this.responseService.badRequest("Insufficient wallet balance");
         }
 
         // 3. Create order
@@ -58,7 +73,7 @@ export class OrdersService {
 
         const savedOrder = await manager.save(order);
         // 4. Create order items
-        const orderItems = items.map(item =>
+        const orderItems = items.map((item) =>
           manager.create(OrderItem, {
             order_id: savedOrder.id,
             product_id: item.productId,
@@ -71,9 +86,13 @@ export class OrdersService {
         await manager.save(orderItems);
 
         // 5. Process payment
-        const deductResponse = await this.walletsService.deductBalance(userId, totalAmount, savedOrder.id);
+        const deductResponse = await this.walletsService.deductBalance(
+          userId,
+          totalAmount,
+          savedOrder.id,
+        );
         if (!deductResponse.success) {
-          throw new Error('Payment processing failed');
+          throw new Error("Payment processing failed");
         }
 
         // 6. Update order status
@@ -82,7 +101,9 @@ export class OrdersService {
         await manager.save(savedOrder);
 
         // 7. Fulfill digital products
-        const fulfillmentResult = await this.fulfillmentService.fulfillOrder(savedOrder.id);
+        const fulfillmentResult = await this.fulfillmentService.fulfillOrder(
+          savedOrder.id,
+        );
         if (fulfillmentResult.success) {
           savedOrder.fulfillment_status = FulfillmentStatus.FULFILLED;
           savedOrder.status = OrderStatus.COMPLETED;
@@ -100,12 +121,21 @@ export class OrdersService {
         await manager.save(savedOrder);
 
         // 8. Send notification
-        await this.notificationsService.sendOrderNotification(userId, savedOrder);
+        await this.notificationsService.sendOrderNotification(
+          userId,
+          savedOrder,
+        );
 
-        return this.responseService.created('Order created successfully', savedOrder);
+        return this.responseService.created(
+          "Order created successfully",
+          savedOrder,
+        );
       });
     } catch (error) {
-      return this.responseService.internalServerError('Failed to create order', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to create order",
+        { error: error.message },
+      );
     }
   }
 
@@ -117,8 +147,14 @@ export class OrdersService {
     const validatedItems: ValidatedItem[] = [];
 
     for (const item of items) {
-      const productResponse = await this.productsService.findById(item.productId);
-      if (!productResponse.success || !productResponse.data || productResponse.data.status !== 'active') {
+      const productResponse = await this.productsService.findById(
+        item.productId,
+      );
+      if (
+        !productResponse.success ||
+        !productResponse.data ||
+        productResponse.data.status !== "active"
+      ) {
         throw new Error(`Product ${item.productId} not available`);
       }
 
@@ -137,49 +173,73 @@ export class OrdersService {
     return { items: validatedItems, totalAmount };
   }
 
-  async getOrders(userId: string, query: OrderQueryDto): Promise<StandardResponse<any>> {
+  async getOrders(
+    userId: string,
+    query: OrderQueryDto,
+  ): Promise<StandardResponse<any>> {
     try {
       const { page = 1, limit = 20, status } = query;
 
       const queryBuilder = this.orderRepository
-        .createQueryBuilder('order')
-        .leftJoinAndSelect('order.items', 'items')
-        .leftJoinAndSelect('items.product', 'product')
-        .where('order.user_id = :userId', { userId })
-        .orderBy('order.created_at', 'DESC')
+        .createQueryBuilder("order")
+        .leftJoinAndSelect("order.items", "items")
+        .leftJoinAndSelect("items.product", "product")
+        .where("order.user_id = :userId", { userId })
+        .orderBy("order.created_at", "DESC")
         .skip((page - 1) * limit)
         .take(limit);
 
       if (status) {
-        queryBuilder.andWhere('order.status = :status', { status });
+        queryBuilder.andWhere("order.status = :status", { status });
       }
 
       const [orders, total] = await queryBuilder.getManyAndCount();
 
-      return this.responseService.paginated(orders, page, limit, total, 'Orders retrieved successfully');
+      return this.responseService.paginated(
+        orders,
+        page,
+        limit,
+        total,
+        "Orders retrieved successfully",
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to retrieve orders', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to retrieve orders",
+        { error: error.message },
+      );
     }
   }
 
-  async getOrder(userId: string, orderId: string): Promise<StandardResponse<Order>> {
+  async getOrder(
+    userId: string,
+    orderId: string,
+  ): Promise<StandardResponse<Order>> {
     try {
       const order = await this.orderRepository.findOne({
         where: { id: orderId, user_id: userId },
-        relations: ['items', 'items.product', 'download_links'],
+        relations: ["items", "items.product", "download_links"],
       });
 
       if (!order) {
-        return this.responseService.notFound('Order not found');
+        return this.responseService.notFound("Order not found");
       }
 
-      return this.responseService.success('Order retrieved successfully', order);
+      return this.responseService.success(
+        "Order retrieved successfully",
+        order,
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to retrieve order', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to retrieve order",
+        { error: error.message },
+      );
     }
   }
 
-  async cancelOrder(userId: string, orderId: string): Promise<StandardResponse<Order>> {
+  async cancelOrder(
+    userId: string,
+    orderId: string,
+  ): Promise<StandardResponse<Order>> {
     try {
       const orderResponse = await this.getOrder(userId, orderId);
       if (!orderResponse.success) {
@@ -189,7 +249,7 @@ export class OrdersService {
       const order = orderResponse.data;
 
       if (order.status !== OrderStatus.PENDING) {
-        return this.responseService.badRequest('Order cannot be cancelled');
+        return this.responseService.badRequest("Order cannot be cancelled");
       }
 
       // Refund if payment was processed
@@ -203,12 +263,18 @@ export class OrdersService {
 
       const updatedOrderResponse = await this.getOrder(userId, orderId);
       if (updatedOrderResponse.success) {
-        return this.responseService.success('Order cancelled successfully', updatedOrderResponse.data);
+        return this.responseService.success(
+          "Order cancelled successfully",
+          updatedOrderResponse.data,
+        );
       }
 
       return updatedOrderResponse;
     } catch (error) {
-      return this.responseService.internalServerError('Failed to cancel order', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to cancel order",
+        { error: error.message },
+      );
     }
   }
 
@@ -216,16 +282,22 @@ export class OrdersService {
     try {
       const order = await this.orderRepository.findOne({
         where: { id: orderId },
-        relations: ['items', 'items.product', 'download_links'],
+        relations: ["items", "items.product", "download_links"],
       });
 
       if (!order) {
-        return this.responseService.notFound('Order not found');
+        return this.responseService.notFound("Order not found");
       }
 
-      return this.responseService.success('Order retrieved successfully', order);
+      return this.responseService.success(
+        "Order retrieved successfully",
+        order,
+      );
     } catch (error) {
-      return this.responseService.internalServerError('Failed to retrieve order', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to retrieve order",
+        { error: error.message },
+      );
     }
   }
 }

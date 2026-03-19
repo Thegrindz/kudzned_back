@@ -1,12 +1,15 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 
-import { Cart } from '../../database/entities/cart.entity';
-import { CartItem } from '../../database/entities/cart-item.entity';
-import { ResponseService, StandardResponse } from '../../common/services/response.service';
-import { ProductsService } from '../products/products.service';
-import { AddToCartDto } from './dto/add-to-cart.dto';
+import { Cart } from "../../database/entities/cart.entity";
+import { CartItem } from "../../database/entities/cart-item.entity";
+import {
+  ResponseService,
+  StandardResponse,
+} from "../../common/services/response.service";
+import { ProductsService } from "../products/products.service";
+import { AddToCartDto } from "./dto/add-to-cart.dto";
 
 @Injectable()
 export class CartService {
@@ -23,7 +26,7 @@ export class CartService {
     try {
       let cart = await this.cartRepository.findOne({
         where: { user_id: userId },
-        relations: ['items', 'items.product'],
+        relations: ["items", "items.product"],
       });
 
       if (!cart) {
@@ -34,13 +37,19 @@ export class CartService {
         cart = await this.cartRepository.save(cart);
       }
 
-      return this.responseService.success('Cart retrieved successfully', cart);
+      return this.responseService.success("Cart retrieved successfully", cart);
     } catch (error) {
-      return this.responseService.internalServerError('Failed to retrieve cart', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to retrieve cart",
+        { error: error.message },
+      );
     }
   }
 
-  async addToCart(userId: string, addToCartDto: AddToCartDto): Promise<StandardResponse<Cart>> {
+  async addToCart(
+    userId: string,
+    addToCartDto: AddToCartDto,
+  ): Promise<StandardResponse<Cart>> {
     try {
       const { productId, quantity } = addToCartDto;
 
@@ -85,16 +94,25 @@ export class CartService {
 
       const updatedCartResponse = await this.getOrCreateCart(userId);
       if (updatedCartResponse.success) {
-        return this.responseService.success('Item added to cart successfully', updatedCartResponse.data);
+        return this.responseService.success(
+          "Item added to cart successfully",
+          updatedCartResponse.data,
+        );
       }
 
       return updatedCartResponse;
     } catch (error) {
-      return this.responseService.internalServerError('Failed to add item to cart', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to add item to cart",
+        { error: error.message },
+      );
     }
   }
 
-  async removeFromCart(userId: string, itemId: string): Promise<StandardResponse<Cart>> {
+  async removeFromCart(
+    userId: string,
+    itemId: string,
+  ): Promise<StandardResponse<Cart>> {
     try {
       const cartResponse = await this.getOrCreateCart(userId);
       if (!cartResponse.success) {
@@ -108,7 +126,7 @@ export class CartService {
       });
 
       if (!cartItem) {
-        return this.responseService.notFound('Cart item not found');
+        return this.responseService.notFound("Cart item not found");
       }
 
       await this.cartItemRepository.delete(itemId);
@@ -116,12 +134,18 @@ export class CartService {
 
       const updatedCartResponse = await this.getOrCreateCart(userId);
       if (updatedCartResponse.success) {
-        return this.responseService.success('Item removed from cart successfully', updatedCartResponse.data);
+        return this.responseService.success(
+          "Item removed from cart successfully",
+          updatedCartResponse.data,
+        );
       }
 
       return updatedCartResponse;
     } catch (error) {
-      return this.responseService.internalServerError('Failed to remove item from cart', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to remove item from cart",
+        { error: error.message },
+      );
     }
   }
 
@@ -140,11 +164,11 @@ export class CartService {
 
       const cartItem = await this.cartItemRepository.findOne({
         where: { id: itemId, cart_id: cart.id },
-        relations: ['product'],
+        relations: ["product"],
       });
 
       if (!cartItem) {
-        return this.responseService.notFound('Cart item not found');
+        return this.responseService.notFound("Cart item not found");
       }
 
       if (quantity <= 0) {
@@ -159,12 +183,18 @@ export class CartService {
 
       const updatedCartResponse = await this.getOrCreateCart(userId);
       if (updatedCartResponse.success) {
-        return this.responseService.success('Cart item quantity updated successfully', updatedCartResponse.data);
+        return this.responseService.success(
+          "Cart item quantity updated successfully",
+          updatedCartResponse.data,
+        );
       }
 
       return updatedCartResponse;
     } catch (error) {
-      return this.responseService.internalServerError('Failed to update cart item quantity', { error: error.message });
+      return this.responseService.internalServerError(
+        "Failed to update cart item quantity",
+        { error: error.message },
+      );
     }
   }
 
@@ -180,17 +210,21 @@ export class CartService {
       await this.cartItemRepository.delete({ cart_id: cart.id });
       await this.cartRepository.update(cart.id, { total_amount: 0 });
 
-      return this.responseService.success('Cart cleared successfully', { success: true });
+      return this.responseService.success("Cart cleared successfully", {
+        success: true,
+      });
     } catch (error) {
-      return this.responseService.internalServerError('Failed to clear cart', { error: error.message });
+      return this.responseService.internalServerError("Failed to clear cart", {
+        error: error.message,
+      });
     }
   }
 
   private async updateCartTotal(cartId: string): Promise<void> {
     const result = await this.cartItemRepository
-      .createQueryBuilder('item')
-      .select('SUM(item.total_price)', 'total')
-      .where('item.cart_id = :cartId', { cartId })
+      .createQueryBuilder("item")
+      .select("SUM(item.total_price)", "total")
+      .where("item.cart_id = :cartId", { cartId })
       .getRawOne();
 
     const total = parseInt(result.total) || 0;

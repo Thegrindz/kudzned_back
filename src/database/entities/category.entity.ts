@@ -5,12 +5,12 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
-} from 'typeorm';
-import { Product } from './product.entity';
+} from "typeorm";
+import { Product } from "./product.entity";
 
-@Entity('categories')
+@Entity("categories")
 export class Category {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true })
@@ -19,7 +19,7 @@ export class Category {
   @Column({ unique: true })
   slug: string;
 
-  @Column('text', { nullable: true })
+  @Column("text", { nullable: true })
   description: string;
 
   @Column({ nullable: true })
@@ -38,6 +38,6 @@ export class Category {
   updated_at: Date;
 
   // Relations
-  @OneToMany(() => Product, product => product.category)
+  @OneToMany(() => Product, (product) => product.category)
   products: Product[];
 }

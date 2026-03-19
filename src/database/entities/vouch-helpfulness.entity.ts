@@ -6,32 +6,32 @@ import {
   JoinColumn,
   CreateDateColumn,
   Index,
-} from 'typeorm';
-import { User } from './user.entity';
-import { Vouch } from './vouch.entity';
+} from "typeorm";
+import { User } from "./user.entity";
+import { Vouch } from "./vouch.entity";
 
 export enum VouchHelpfulnessType {
-  HELPFUL = 'helpful',
-  NOT_HELPFUL = 'not_helpful',
+  HELPFUL = "helpful",
+  NOT_HELPFUL = "not_helpful",
 }
 
-@Entity('vouch_helpfulness')
-@Index(['user_id', 'vouch_id'], { unique: true }) // Prevent duplicate votes
-@Index(['vouch_id', 'vote_type'])
+@Entity("vouch_helpfulness")
+@Index(["user_id", "vouch_id"], { unique: true }) // Prevent duplicate votes
+@Index(["vouch_id", "vote_type"])
 export class VouchHelpfulness {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: "uuid" })
   @Index()
   user_id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: "uuid" })
   @Index()
   vouch_id: string;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: VouchHelpfulnessType,
   })
   vote_type: VouchHelpfulnessType;
@@ -40,11 +40,13 @@ export class VouchHelpfulness {
   created_at: Date;
 
   // Relations
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
+  @ManyToOne(() => User, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "user_id" })
   user: User;
 
-  @ManyToOne(() => Vouch, (vouch) => vouch.helpfulness_votes, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'vouch_id' })
+  @ManyToOne(() => Vouch, (vouch) => vouch.helpfulness_votes, {
+    onDelete: "CASCADE",
+  })
+  @JoinColumn({ name: "vouch_id" })
   vouch: Vouch;
 }

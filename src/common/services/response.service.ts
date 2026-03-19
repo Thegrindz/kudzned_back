@@ -1,5 +1,5 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { ApiProperty } from '@nestjs/swagger';
+import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
+import { ApiProperty } from "@nestjs/swagger";
 
 // Enhanced Standard Response with metadata
 export class StandardResponse<T> {
@@ -108,19 +108,12 @@ export class ResponseService {
     const hasNext = metadata.page < pages;
     const hasPrev = metadata.page > 1;
 
-    return this.Response(
-      true,
-      message,
-      HttpStatus.OK,
-      payload,
-      undefined,
-      {
-        ...metadata,
-        pages,
-        hasNext,
-        hasPrev,
-      },
-    );
+    return this.Response(true, message, HttpStatus.OK, payload, undefined, {
+      ...metadata,
+      pages,
+      hasNext,
+      hasPrev,
+    });
   }
 
   created<T>(message: string, data?: T): StandardResponse<T> {
@@ -131,7 +124,7 @@ export class ResponseService {
     return this.Response(true, message, HttpStatus.ACCEPTED, data);
   }
 
-  noContent(message: string = 'No content'): StandardResponse<null> {
+  noContent(message: string = "No content"): StandardResponse<null> {
     return this.Response(true, message, HttpStatus.NO_CONTENT, null);
   }
 
@@ -149,64 +142,64 @@ export class ResponseService {
     return this.error(message, HttpStatus.BAD_REQUEST, errors);
   }
 
-  unauthorized<T>(message: string = 'Unauthorized'): StandardResponse<T> {
+  unauthorized<T>(message: string = "Unauthorized"): StandardResponse<T> {
     return this.error(message, HttpStatus.UNAUTHORIZED);
   }
 
-  forbidden<T>(message: string = 'Forbidden'): StandardResponse<T> {
+  forbidden<T>(message: string = "Forbidden"): StandardResponse<T> {
     return this.error(message, HttpStatus.FORBIDDEN);
   }
 
-  notFound<T>(message: string = 'Resource not found'): StandardResponse<T> {
+  notFound<T>(message: string = "Resource not found"): StandardResponse<T> {
     return this.error(message, HttpStatus.NOT_FOUND);
   }
 
   methodNotAllowed<T>(
-    message: string = 'Method not allowed',
+    message: string = "Method not allowed",
   ): StandardResponse<T> {
     return this.error(message, HttpStatus.METHOD_NOT_ALLOWED);
   }
 
-  conflict<T>(message: string = 'Resource conflict'): StandardResponse<T> {
+  conflict<T>(message: string = "Resource conflict"): StandardResponse<T> {
     return this.error(message, HttpStatus.CONFLICT);
   }
 
   unprocessableEntity<T>(
-    message: string = 'Unprocessable entity',
+    message: string = "Unprocessable entity",
     errors?: any,
   ): StandardResponse<T> {
     return this.error(message, HttpStatus.UNPROCESSABLE_ENTITY, errors);
   }
 
   tooManyRequests<T>(
-    message: string = 'Too many requests',
+    message: string = "Too many requests",
   ): StandardResponse<T> {
     return this.error(message, HttpStatus.TOO_MANY_REQUESTS);
   }
 
   // 5xx Server Errors
   internalServerError<T>(
-    message: string = 'Internal server error',
+    message: string = "Internal server error",
     error?: any,
   ): StandardResponse<T> {
     return this.error(message, HttpStatus.INTERNAL_SERVER_ERROR, error);
   }
 
-  notImplemented<T>(message: string = 'Not implemented'): StandardResponse<T> {
+  notImplemented<T>(message: string = "Not implemented"): StandardResponse<T> {
     return this.error(message, HttpStatus.NOT_IMPLEMENTED);
   }
 
-  badGateway<T>(message: string = 'Bad gateway'): StandardResponse<T> {
+  badGateway<T>(message: string = "Bad gateway"): StandardResponse<T> {
     return this.error(message, HttpStatus.BAD_GATEWAY);
   }
 
   serviceUnavailable<T>(
-    message: string = 'Service unavailable',
+    message: string = "Service unavailable",
   ): StandardResponse<T> {
     return this.error(message, HttpStatus.SERVICE_UNAVAILABLE);
   }
 
-  gatewayTimeout<T>(message: string = 'Gateway timeout'): StandardResponse<T> {
+  gatewayTimeout<T>(message: string = "Gateway timeout"): StandardResponse<T> {
     return this.error(message, HttpStatus.GATEWAY_TIMEOUT);
   }
 
@@ -215,7 +208,7 @@ export class ResponseService {
     amount: number,
     currentBalance: number,
   ): StandardResponse<T> {
-    return this.error('Insufficient balance', HttpStatus.BAD_REQUEST, {
+    return this.error("Insufficient balance", HttpStatus.BAD_REQUEST, {
       required: amount,
       available: currentBalance,
       deficit: amount - currentBalance,
@@ -223,38 +216,38 @@ export class ResponseService {
   }
 
   invalidTransactionPin<T>(attempts?: number): StandardResponse<T> {
-    return this.error('Invalid transaction PIN', HttpStatus.UNAUTHORIZED, {
+    return this.error("Invalid transaction PIN", HttpStatus.UNAUTHORIZED, {
       attempts,
       message:
         attempts && attempts >= 3
-          ? 'Too many attempts. Account temporarily locked.'
+          ? "Too many attempts. Account temporarily locked."
           : undefined,
     });
   }
 
   accountLocked<T>(reason: string, unlockTime?: Date): StandardResponse<T> {
-    return this.error('Account locked', HttpStatus.FORBIDDEN, {
+    return this.error("Account locked", HttpStatus.FORBIDDEN, {
       reason,
       unlockTime: unlockTime?.toISOString(),
     });
   }
 
-  expiredToken<T>(tokenType: string = 'access'): StandardResponse<T> {
+  expiredToken<T>(tokenType: string = "access"): StandardResponse<T> {
     return this.error(`${tokenType} token expired`, HttpStatus.UNAUTHORIZED, {
       tokenType,
-      action: 'refresh',
+      action: "refresh",
     });
   }
 
-  invalidToken<T>(tokenType: string = 'access'): StandardResponse<T> {
+  invalidToken<T>(tokenType: string = "access"): StandardResponse<T> {
     return this.error(`Invalid ${tokenType} token`, HttpStatus.UNAUTHORIZED, {
       tokenType,
-      action: 'reauthenticate',
+      action: "reauthenticate",
     });
   }
 
   rateLimitExceeded<T>(limit: number, resetTime: Date): StandardResponse<T> {
-    return this.error('Rate limit exceeded', HttpStatus.TOO_MANY_REQUESTS, {
+    return this.error("Rate limit exceeded", HttpStatus.TOO_MANY_REQUESTS, {
       limit,
       resetTime: resetTime.toISOString(),
       retryAfter: Math.ceil((resetTime.getTime() - Date.now()) / 1000),
@@ -262,7 +255,7 @@ export class ResponseService {
   }
 
   validationError<T>(errors: any): StandardResponse<T> {
-    return this.error('Validation failed', HttpStatus.BAD_REQUEST, errors);
+    return this.error("Validation failed", HttpStatus.BAD_REQUEST, errors);
   }
 
   duplicateResource<T>(
@@ -278,10 +271,10 @@ export class ResponseService {
   }
 
   paymentFailed<T>(reason: string, reference?: string): StandardResponse<T> {
-    return this.error('Payment failed', HttpStatus.PAYMENT_REQUIRED, {
+    return this.error("Payment failed", HttpStatus.PAYMENT_REQUIRED, {
       reason,
       reference,
-      action: 'retry_or_contact_support',
+      action: "retry_or_contact_support",
     });
   }
 
@@ -290,20 +283,20 @@ export class ResponseService {
     const response = exception.getResponse();
     const status = exception.getStatus();
 
-    if (typeof response === 'string') {
+    if (typeof response === "string") {
       return this.Response(false, response, status, null as T);
-    } else if (typeof response === 'object') {
+    } else if (typeof response === "object") {
       const { message, ...errors } = response as any;
       return this.Response(
         false,
-        message || 'An error occurred',
+        message || "An error occurred",
         status,
         null as T,
         errors,
       );
     }
 
-    return this.Response(false, 'An error occurred', status, null as T);
+    return this.Response(false, "An error occurred", status, null as T);
   }
 
   /**
@@ -320,25 +313,24 @@ export class ResponseService {
       // If result is already a StandardResponse, return it as is
       if (
         result &&
-        typeof result === 'object' &&
-        'success' in result &&
-        'status' in result
+        typeof result === "object" &&
+        "success" in result &&
+        "status" in result
       ) {
         return result as unknown as StandardResponse<T>;
       }
 
       return this.success(successMessage, result);
     } catch (error) {
-      console.error('Operation failed:', error);
+      console.error("Operation failed:", error);
 
       if (error instanceof HttpException) {
         return this.fromException(error);
       }
 
-      return this.internalServerError(errorMessage || 'Operation failed', {
+      return this.internalServerError(errorMessage || "Operation failed", {
         error: error.message,
-        stack:
-          process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       });
     }
   }
@@ -351,26 +343,19 @@ export class ResponseService {
     page: number,
     limit: number,
     total: number,
-    message: string = 'Data retrieved successfully',
+    message: string = "Data retrieved successfully",
   ): StandardResponse<T[]> {
     const pages = Math.ceil(total / limit);
     const hasNext = page < pages;
     const hasPrev = page > 1;
 
-    return this.Response(
-      true,
-      message,
-      HttpStatus.OK,
-      data,
-      undefined,
-      {
-        page,
-        limit,
-        total,
-        pages,
-        hasNext,
-        hasPrev,
-      },
-    );
+    return this.Response(true, message, HttpStatus.OK, data, undefined, {
+      page,
+      limit,
+      total,
+      pages,
+      hasNext,
+      hasPrev,
+    });
   }
 }

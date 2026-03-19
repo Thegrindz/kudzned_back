@@ -21,8 +21,7 @@ export class BTCWebhookDto {
 
   @ApiProperty({
     description: "Bitcoin transaction hash",
-    example:
-      "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456",
+    example: "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456",
   })
   @IsString()
   @IsNotEmpty()

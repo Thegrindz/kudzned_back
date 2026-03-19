@@ -6,28 +6,28 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
-} from 'typeorm';
-import { Order } from './order.entity';
-import { Product } from './product.entity';
+} from "typeorm";
+import { Order } from "./order.entity";
+import { Product } from "./product.entity";
 
-@Entity('order_items')
+@Entity("order_items")
 export class OrderItem {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column('uuid')
+  @Column("uuid")
   order_id: string;
 
-  @Column('uuid')
+  @Column("uuid")
   product_id: string;
 
   @Column()
   quantity: number;
 
-  @Column('bigint')
+  @Column("bigint")
   unit_price: number;
 
-  @Column('bigint')
+  @Column("bigint")
   total_price: number;
 
   @CreateDateColumn()
@@ -37,11 +37,11 @@ export class OrderItem {
   updated_at: Date;
 
   // Relations
-  @ManyToOne(() => Order, order => order.items)
-  @JoinColumn({ name: 'order_id' })
+  @ManyToOne(() => Order, (order) => order.items)
+  @JoinColumn({ name: "order_id" })
   order: Order;
 
-  @ManyToOne(() => Product, product => product.order_items)
-  @JoinColumn({ name: 'product_id' })
+  @ManyToOne(() => Product, (product) => product.order_items)
+  @JoinColumn({ name: "product_id" })
   product: Product;
 }

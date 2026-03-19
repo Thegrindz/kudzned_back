@@ -5,18 +5,18 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
-} from 'typeorm';
-import { CartItem } from './cart-item.entity';
+} from "typeorm";
+import { CartItem } from "./cart-item.entity";
 
-@Entity('carts')
+@Entity("carts")
 export class Cart {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column('uuid')
+  @Column("uuid")
   user_id: string;
 
-  @Column('bigint', { default: 0 })
+  @Column("bigint", { default: 0 })
   total_amount: number;
 
   @CreateDateColumn()
@@ -26,6 +26,6 @@ export class Cart {
   updated_at: Date;
 
   // Relations
-  @OneToMany(() => CartItem, item => item.cart)
+  @OneToMany(() => CartItem, (item) => item.cart)
   items: CartItem[];
 }

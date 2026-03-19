@@ -1,10 +1,20 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsInt, IsString, IsEnum, IsArray, Min, Max, MinLength, MaxLength } from 'class-validator';
-import { VouchTag } from '../../../database/entities/vouch.entity';
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  IsOptional,
+  IsInt,
+  IsString,
+  IsEnum,
+  IsArray,
+  Min,
+  Max,
+  MinLength,
+  MaxLength,
+} from "class-validator";
+import { VouchTag } from "../../../database/entities/vouch.entity";
 
 export class UpdateVouchDto {
   @ApiPropertyOptional({
-    description: 'Rating from 1 to 5 stars',
+    description: "Rating from 1 to 5 stars",
     minimum: 1,
     maximum: 5,
     example: 4,
@@ -16,10 +26,11 @@ export class UpdateVouchDto {
   rating?: number;
 
   @ApiPropertyOptional({
-    description: 'Vouch comment/review',
+    description: "Vouch comment/review",
     minLength: 10,
     maxLength: 1000,
-    example: 'Updated review: Still a great product but delivery was slower this time.',
+    example:
+      "Updated review: Still a great product but delivery was slower this time.",
   })
   @IsOptional()
   @IsString()
@@ -28,7 +39,7 @@ export class UpdateVouchDto {
   comment?: string;
 
   @ApiPropertyOptional({
-    description: 'Tags to categorize the vouch',
+    description: "Tags to categorize the vouch",
     enum: VouchTag,
     isArray: true,
     example: [VouchTag.RELIABLE, VouchTag.GOOD_SUPPORT],
@@ -39,9 +50,9 @@ export class UpdateVouchDto {
   tags?: VouchTag[];
 
   @ApiPropertyOptional({
-    description: 'Proof image file (multipart upload)',
-    type: 'string',
-    format: 'binary',
+    description: "Proof image file (multipart upload)",
+    type: "string",
+    format: "binary",
   })
   proof_image?: any;
 }

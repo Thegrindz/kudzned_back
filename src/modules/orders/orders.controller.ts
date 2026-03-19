@@ -9,30 +9,30 @@ import {
   Req,
   Res,
   StreamableFile,
-} from '@nestjs/common';
-import { Response } from 'express';
-import { createReadStream } from 'fs';
-import { 
-  ApiTags, 
-  ApiOperation, 
-  ApiResponse, 
-  ApiBearerAuth, 
-  ApiParam, 
-  ApiQuery, 
+} from "@nestjs/common";
+import { Response } from "express";
+import { createReadStream } from "fs";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+  ApiQuery,
   ApiBody,
-  ApiProduces 
-} from '@nestjs/swagger';
+  ApiProduces,
+} from "@nestjs/swagger";
 
-import { OrdersService } from './orders.service';
-import { FulfillmentService } from './fulfillment.service';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { OrdersService } from "./orders.service";
+import { FulfillmentService } from "./fulfillment.service";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 
-import { CreateOrderDto } from './dto/create-order.dto';
-import { OrderQueryDto } from './dto/order-query.dto';
+import { CreateOrderDto } from "./dto/create-order.dto";
+import { OrderQueryDto } from "./dto/order-query.dto";
 
-@ApiTags('Orders')
-@ApiBearerAuth('JWT-auth')
-@Controller('orders')
+@ApiTags("Orders")
+@ApiBearerAuth("JWT-auth")
+@Controller("orders")
 @UseGuards(JwtAuthGuard)
 export class OrdersController {
   constructor(
@@ -41,193 +41,209 @@ export class OrdersController {
   ) {}
 
   @Get()
-  @ApiOperation({ 
-    summary: 'Get user orders',
-    description: 'Retrieve paginated list of orders for the authenticated user'
+  @ApiOperation({
+    summary: "Get user orders",
+    description: "Retrieve paginated list of orders for the authenticated user",
   })
   @ApiQuery({ type: OrderQueryDto })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Orders retrieved successfully',
+  @ApiResponse({
+    status: 200,
+    description: "Orders retrieved successfully",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        success: { type: 'boolean', example: true },
-        message: { type: 'string', example: 'Orders retrieved successfully' },
+        success: { type: "boolean", example: true },
+        message: { type: "string", example: "Orders retrieved successfully" },
         data: {
-          type: 'array',
+          type: "array",
           items: {
-            type: 'object',
+            type: "object",
             properties: {
-              id: { type: 'string', format: 'uuid' },
-              total_amount: { type: 'number' },
-              status: { type: 'string', enum: ['pending', 'confirmed', 'completed', 'cancelled', 'failed'] },
-              created_at: { type: 'string', format: 'date-time' },
+              id: { type: "string", format: "uuid" },
+              total_amount: { type: "number" },
+              status: {
+                type: "string",
+                enum: [
+                  "pending",
+                  "confirmed",
+                  "completed",
+                  "cancelled",
+                  "failed",
+                ],
+              },
+              created_at: { type: "string", format: "date-time" },
               items: {
-                type: 'array',
+                type: "array",
                 items: {
-                  type: 'object',
+                  type: "object",
                   properties: {
                     product: {
-                      type: 'object',
+                      type: "object",
                       properties: {
-                        title: { type: 'string' },
-                        price: { type: 'number' }
-                      }
+                        title: { type: "string" },
+                        price: { type: "number" },
+                      },
                     },
-                    quantity: { type: 'number' },
-                    unit_price: { type: 'number' },
-                    total_price: { type: 'number' }
-                  }
-                }
-              }
-            }
-          }
+                    quantity: { type: "number" },
+                    unit_price: { type: "number" },
+                    total_price: { type: "number" },
+                  },
+                },
+              },
+            },
+          },
         },
         metadata: {
-          type: 'object',
+          type: "object",
           properties: {
-            page: { type: 'number' },
-            limit: { type: 'number' },
-            total: { type: 'number' },
-            pages: { type: 'number' }
-          }
-        }
-      }
-    }
+            page: { type: "number" },
+            limit: { type: "number" },
+            total: { type: "number" },
+            pages: { type: "number" },
+          },
+        },
+      },
+    },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
   async getOrders(@Req() req: any, @Query() query: OrderQueryDto) {
     return this.ordersService.getOrders(req.user.id, query);
   }
 
-  @Get(':id')
-  @ApiOperation({ 
-    summary: 'Get order details',
-    description: 'Retrieve detailed information about a specific order'
+  @Get(":id")
+  @ApiOperation({
+    summary: "Get order details",
+    description: "Retrieve detailed information about a specific order",
   })
-  @ApiParam({ name: 'id', description: 'Order ID', format: 'uuid' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Order details retrieved successfully',
+  @ApiParam({ name: "id", description: "Order ID", format: "uuid" })
+  @ApiResponse({
+    status: 200,
+    description: "Order details retrieved successfully",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        success: { type: 'boolean', example: true },
-        message: { type: 'string', example: 'Order retrieved successfully' },
+        success: { type: "boolean", example: true },
+        message: { type: "string", example: "Order retrieved successfully" },
         data: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string', format: 'uuid' },
-            total_amount: { type: 'number' },
-            status: { type: 'string' },
-            payment_status: { type: 'string' },
-            fulfillment_status: { type: 'string' },
-            created_at: { type: 'string', format: 'date-time' },
-            items: { type: 'array' },
-            download_links: { type: 'array' }
-          }
-        }
-      }
-    }
+            id: { type: "string", format: "uuid" },
+            total_amount: { type: "number" },
+            status: { type: "string" },
+            payment_status: { type: "string" },
+            fulfillment_status: { type: "string" },
+            created_at: { type: "string", format: "date-time" },
+            items: { type: "array" },
+            download_links: { type: "array" },
+          },
+        },
+      },
+    },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Order not found' })
-  async getOrder(@Req() req: any, @Param('id') id: string) {
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 404, description: "Order not found" })
+  async getOrder(@Req() req: any, @Param("id") id: string) {
     return this.ordersService.getOrder(req.user.id, id);
   }
 
   @Post()
-  @ApiOperation({ 
-    summary: 'Create new order',
-    description: 'Create a new order from cart items or specified products'
+  @ApiOperation({
+    summary: "Create new order",
+    description: "Create a new order from cart items or specified products",
   })
   @ApiBody({ type: CreateOrderDto })
-  @ApiResponse({ 
-    status: 201, 
-    description: 'Order created successfully',
+  @ApiResponse({
+    status: 201,
+    description: "Order created successfully",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        success: { type: 'boolean', example: true },
-        message: { type: 'string', example: 'Order created successfully' },
+        success: { type: "boolean", example: true },
+        message: { type: "string", example: "Order created successfully" },
         data: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string', format: 'uuid' },
-            total_amount: { type: 'number' },
-            status: { type: 'string', example: 'completed' },
-            payment_status: { type: 'string', example: 'paid' },
-            fulfillment_status: { type: 'string', example: 'fulfilled' }
-          }
-        }
-      }
-    }
+            id: { type: "string", format: "uuid" },
+            total_amount: { type: "number" },
+            status: { type: "string", example: "completed" },
+            payment_status: { type: "string", example: "paid" },
+            fulfillment_status: { type: "string", example: "fulfilled" },
+          },
+        },
+      },
+    },
   })
-  @ApiResponse({ status: 400, description: 'Bad request - Invalid items or insufficient balance' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 400,
+    description: "Bad request - Invalid items or insufficient balance",
+  })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
   async createOrder(@Req() req: any, @Body() createOrderDto: CreateOrderDto) {
     return this.ordersService.createOrder(req.user.id, createOrderDto);
   }
 
-  @Post(':id/cancel')
-  @ApiOperation({ 
-    summary: 'Cancel order',
-    description: 'Cancel a pending order and process refund if payment was made'
+  @Post(":id/cancel")
+  @ApiOperation({
+    summary: "Cancel order",
+    description:
+      "Cancel a pending order and process refund if payment was made",
   })
-  @ApiParam({ name: 'id', description: 'Order ID', format: 'uuid' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Order cancelled successfully',
+  @ApiParam({ name: "id", description: "Order ID", format: "uuid" })
+  @ApiResponse({
+    status: 200,
+    description: "Order cancelled successfully",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        success: { type: 'boolean', example: true },
-        message: { type: 'string', example: 'Order cancelled successfully' },
+        success: { type: "boolean", example: true },
+        message: { type: "string", example: "Order cancelled successfully" },
         data: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string', format: 'uuid' },
-            status: { type: 'string', example: 'cancelled' }
-          }
-        }
-      }
-    }
+            id: { type: "string", format: "uuid" },
+            status: { type: "string", example: "cancelled" },
+          },
+        },
+      },
+    },
   })
-  @ApiResponse({ status: 400, description: 'Order cannot be cancelled' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Order not found' })
-  async cancelOrder(@Req() req: any, @Param('id') id: string) {
+  @ApiResponse({ status: 400, description: "Order cannot be cancelled" })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 404, description: "Order not found" })
+  async cancelOrder(@Req() req: any, @Param("id") id: string) {
     return this.ordersService.cancelOrder(req.user.id, id);
   }
 
-  @Get(':id/download/:fileId')
-  @ApiOperation({ 
-    summary: 'Download digital file',
-    description: 'Download a digital file from a completed order'
+  @Get(":id/download/:fileId")
+  @ApiOperation({
+    summary: "Download digital file",
+    description: "Download a digital file from a completed order",
   })
-  @ApiParam({ name: 'id', description: 'Order ID', format: 'uuid' })
-  @ApiParam({ name: 'fileId', description: 'Digital file ID', format: 'uuid' })
-  @ApiProduces('application/octet-stream')
-  @ApiResponse({ 
-    status: 200, 
-    description: 'File download started',
+  @ApiParam({ name: "id", description: "Order ID", format: "uuid" })
+  @ApiParam({ name: "fileId", description: "Digital file ID", format: "uuid" })
+  @ApiProduces("application/octet-stream")
+  @ApiResponse({
+    status: 200,
+    description: "File download started",
     content: {
-      'application/octet-stream': {
+      "application/octet-stream": {
         schema: {
-          type: 'string',
-          format: 'binary'
-        }
-      }
-    }
+          type: "string",
+          format: "binary",
+        },
+      },
+    },
   })
-  @ApiResponse({ status: 400, description: 'Download link expired or limit exceeded' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Order or file not found' })
+  @ApiResponse({
+    status: 400,
+    description: "Download link expired or limit exceeded",
+  })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 404, description: "Order or file not found" })
   async downloadFile(
     @Req() req: any,
-    @Param('id') orderId: string,
-    @Param('fileId') fileId: string,
+    @Param("id") orderId: string,
+    @Param("fileId") fileId: string,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
     const downloadLinkResponse = await this.fulfillmentService.getDownloadLink(
@@ -244,8 +260,8 @@ export class OrdersController {
     const file = createReadStream(downloadLink.digital_file.file_path);
 
     res.set({
-      'Content-Type': downloadLink.digital_file.mime_type,
-      'Content-Disposition': `attachment; filename="${downloadLink.digital_file.original_name}"`,
+      "Content-Type": downloadLink.digital_file.mime_type,
+      "Content-Disposition": `attachment; filename="${downloadLink.digital_file.original_name}"`,
     });
 
     return new StreamableFile(file);

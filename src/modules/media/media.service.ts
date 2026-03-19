@@ -1,7 +1,10 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { CloudinaryService } from '../../common/services/cloudinary.service';
-import { ResponseService, StandardResponse } from '../../common/services/response.service';
+import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { CloudinaryService } from "../../common/services/cloudinary.service";
+import {
+  ResponseService,
+  StandardResponse,
+} from "../../common/services/response.service";
 
 @Injectable()
 export class MediaService {
@@ -13,11 +16,11 @@ export class MediaService {
 
   async uploadFile(
     file: Express.Multer.File,
-    type: 'product' | 'digital-file' | 'avatar' = 'product',
+    type: "product" | "digital-file" | "avatar" = "product",
   ): Promise<StandardResponse<any>> {
     try {
       if (!file) {
-        return this.responseService.badRequest('No file provided');
+        return this.responseService.badRequest("No file provided");
       }
 
       // Validate file based on type
@@ -29,11 +32,15 @@ export class MediaService {
       // Upload to Cloudinary
       const folder = this.getCloudinaryFolder(type);
       const options = this.getUploadOptions(type);
-      
-      const uploadResult = await this.cloudinaryService.uploadFile(file, folder, options);
+
+      const uploadResult = await this.cloudinaryService.uploadFile(
+        file,
+        folder,
+        options,
+      );
 
       // Return formatted response
-      return this.responseService.success('File uploaded successfully', {
+      return this.responseService.success("File uploaded successfully", {
         filename: uploadResult.public_id,
         original_name: file.originalname,
         url: uploadResult.secure_url,
@@ -46,20 +53,19 @@ export class MediaService {
         created_at: uploadResult.created_at,
       });
     } catch (error) {
-      return this.responseService.internalServerError(
-        'Failed to upload file',
-        { error: error.message },
-      );
+      return this.responseService.internalServerError("Failed to upload file", {
+        error: error.message,
+      });
     }
   }
 
   async uploadMultipleFiles(
     files: Express.Multer.File[],
-    type: 'product' | 'digital-file' | 'avatar' = 'product',
+    type: "product" | "digital-file" | "avatar" = "product",
   ): Promise<StandardResponse<any[]>> {
     try {
       if (!files || files.length === 0) {
-        return this.responseService.badRequest('No files provided');
+        return this.responseService.badRequest("No files provided");
       }
 
       // Validate all files
@@ -67,7 +73,7 @@ export class MediaService {
         const validation = this.validateFile(file, type);
         if (!validation.isValid) {
           return this.responseService.badRequest(
-            `File ${file.originalname}: ${validation.message}`
+            `File ${file.originalname}: ${validation.message}`,
           );
         }
       }
@@ -75,8 +81,12 @@ export class MediaService {
       // Upload to Cloudinary
       const folder = this.getCloudinaryFolder(type);
       const options = this.getUploadOptions(type);
-      
-      const uploadResults = await this.cloudinaryService.uploadMultipleFiles(files, folder, options);
+
+      const uploadResults = await this.cloudinaryService.uploadMultipleFiles(
+        files,
+        folder,
+        options,
+      );
 
       // Format response
       const formattedResults = uploadResults.map((result, index) => ({
@@ -94,11 +104,11 @@ export class MediaService {
 
       return this.responseService.success(
         `${formattedResults.length} files uploaded successfully`,
-        formattedResults
+        formattedResults,
       );
     } catch (error) {
       return this.responseService.internalServerError(
-        'Failed to upload files',
+        "Failed to upload files",
         { error: error.message },
       );
     }
@@ -107,40 +117,48 @@ export class MediaService {
   async deleteFile(publicId: string): Promise<StandardResponse<any>> {
     try {
       const result = await this.cloudinaryService.deleteFile(publicId);
-      return this.responseService.success('File deleted successfully', result);
+      return this.responseService.success("File deleted successfully", result);
     } catch (error) {
-      return this.responseService.internalServerError(
-        'Failed to delete file',
-        { error: error.message },
-      );
+      return this.responseService.internalServerError("Failed to delete file", {
+        error: error.message,
+      });
     }
   }
 
   async getFileInfo(publicId: string): Promise<StandardResponse<any>> {
     try {
       const result = await this.cloudinaryService.getFileInfo(publicId);
-      return this.responseService.success('File info retrieved successfully', result);
+      return this.responseService.success(
+        "File info retrieved successfully",
+        result,
+      );
     } catch (error) {
       return this.responseService.internalServerError(
-        'Failed to get file info',
+        "Failed to get file info",
         { error: error.message },
       );
     }
   }
 
-  generateTransformationUrl(publicId: string, transformations: any = {}): string {
-    return this.cloudinaryService.generateTransformationUrl(publicId, transformations);
+  generateTransformationUrl(
+    publicId: string,
+    transformations: any = {},
+  ): string {
+    return this.cloudinaryService.generateTransformationUrl(
+      publicId,
+      transformations,
+    );
   }
 
   private validateFile(
     file: Express.Multer.File,
-    type: 'product' | 'digital-file' | 'avatar',
+    type: "product" | "digital-file" | "avatar",
   ): { isValid: boolean; message?: string } {
     // File size validation
     const maxSizes = {
-      'product': 5, // 5MB for product images
-      'avatar': 2, // 2MB for avatars
-      'digital-file': 100, // 100MB for digital files
+      product: 5, // 5MB for product images
+      avatar: 2, // 2MB for avatars
+      "digital-file": 100, // 100MB for digital files
     };
 
     if (!this.cloudinaryService.validateFileSize(file, maxSizes[type])) {
@@ -152,27 +170,42 @@ export class MediaService {
 
     // File type validation
     const allowedTypes = {
-      'product': ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-      'avatar': ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-      'digital-file': [
+      product: ["image/jpeg", "image/png", "image/gif", "image/webp"],
+      avatar: ["image/jpeg", "image/png", "image/gif", "image/webp"],
+      "digital-file": [
         // Images
-        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
         // Documents
-        'application/pdf', 'application/msword', 
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-powerpoint',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'text/plain', 'text/csv',
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "text/plain",
+        "text/csv",
         // Archives
-        'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed',
+        "application/zip",
+        "application/x-rar-compressed",
+        "application/x-7z-compressed",
         // Audio
-        'audio/mpeg', 'audio/wav', 'audio/ogg',
+        "audio/mpeg",
+        "audio/wav",
+        "audio/ogg",
         // Video
-        'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo',
+        "video/mp4",
+        "video/mpeg",
+        "video/quicktime",
+        "video/x-msvideo",
         // Code files
-        'text/javascript', 'text/css', 'text/html', 'application/json',
+        "text/javascript",
+        "text/css",
+        "text/html",
+        "application/json",
       ],
     };
 
@@ -188,34 +221,31 @@ export class MediaService {
 
   private getCloudinaryFolder(type: string): string {
     const folders = {
-      'product': 'kudzned/products',
-      'avatar': 'kudzned/avatars',
-      'digital-file': 'kudzned/digital-files',
+      product: "kudzned/products",
+      avatar: "kudzned/avatars",
+      "digital-file": "kudzned/digital-files",
     };
-    return folders[type] || 'kudzned/misc';
+    return folders[type] || "kudzned/misc";
   }
 
   private getUploadOptions(type: string): any {
     const baseOptions = {
-      resource_type: 'auto',
+      resource_type: "auto",
       use_filename: true,
       unique_filename: true,
     };
 
     switch (type) {
-      case 'product':
-      case 'avatar':
+      case "product":
+      case "avatar":
         return {
           ...baseOptions,
-          transformation: [
-            { quality: 'auto:good' },
-            { fetch_format: 'auto' },
-          ],
+          transformation: [{ quality: "auto:good" }, { fetch_format: "auto" }],
         };
-      case 'digital-file':
+      case "digital-file":
         return {
           ...baseOptions,
-          resource_type: 'auto',
+          resource_type: "auto",
         };
       default:
         return baseOptions;

@@ -1,10 +1,10 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum } from 'class-validator';
-import { VouchHelpfulnessType } from '../../../database/entities/vouch-helpfulness.entity';
+import { ApiProperty } from "@nestjs/swagger";
+import { IsEnum } from "class-validator";
+import { VouchHelpfulnessType } from "../../../database/entities/vouch-helpfulness.entity";
 
 export class VouchHelpfulnessDto {
   @ApiProperty({
-    description: 'Type of helpfulness vote',
+    description: "Type of helpfulness vote",
     enum: VouchHelpfulnessType,
     example: VouchHelpfulnessType.HELPFUL,
   })

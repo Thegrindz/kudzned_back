@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { HttpService } from '@nestjs/axios';
+import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { HttpService } from "@nestjs/axios";
 
 @Injectable()
 export class EmailService {
@@ -15,18 +15,18 @@ export class EmailService {
     html: string;
     text?: string;
   }): Promise<void> {
-    const apiKey = this.configService.get('email.apiKey');
-    const fromEmail = this.configService.get('email.fromEmail');
+    const apiKey = this.configService.get("email.apiKey");
+    const fromEmail = this.configService.get("email.fromEmail");
 
     if (!apiKey) {
-      console.log('Email API key not configured, skipping email send');
+      console.log("Email API key not configured, skipping email send");
       return;
     }
 
     try {
       // This is a mock implementation
       // In production, integrate with your email service provider (SendGrid, Mailgun, etc.)
-      console.log('Sending email:', {
+      console.log("Sending email:", {
         from: fromEmail,
         to: data.to,
         subject: data.subject,
@@ -50,9 +50,8 @@ export class EmailService {
       //     'Content-Type': 'application/json',
       //   },
       // }).toPromise();
-
     } catch (error) {
-      console.error('Failed to send email:', error);
+      console.error("Failed to send email:", error);
       throw error;
     }
   }
@@ -68,12 +67,15 @@ export class EmailService {
 
     await this.sendEmail({
       to: email,
-      subject: 'Order Confirmation - KUDZNED',
+      subject: "Order Confirmation - KUDZNED",
       html,
     });
   }
 
-  async sendDepositConfirmation(email: string, depositData: any): Promise<void> {
+  async sendDepositConfirmation(
+    email: string,
+    depositData: any,
+  ): Promise<void> {
     const html = `
       <h2>Deposit Confirmed</h2>
       <p>Your Bitcoin deposit has been confirmed!</p>
@@ -84,7 +86,7 @@ export class EmailService {
 
     await this.sendEmail({
       to: email,
-      subject: 'Deposit Confirmed - KUDZNED',
+      subject: "Deposit Confirmed - KUDZNED",
       html,
     });
   }
@@ -104,7 +106,7 @@ export class EmailService {
 
     await this.sendEmail({
       to: email,
-      subject: `KYC ${approved ? 'Approved' : 'Rejected'} - KUDZNED`,
+      subject: `KYC ${approved ? "Approved" : "Rejected"} - KUDZNED`,
       html,
     });
   }

@@ -3,10 +3,10 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
-} from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { StandardResponse } from '../services/response.service';
+} from "@nestjs/common";
+import { Observable } from "rxjs";
+import { map } from "rxjs/operators";
+import { StandardResponse } from "../services/response.service";
 
 @Injectable()
 export class ResponseSyncInterceptor implements NestInterceptor {
@@ -16,7 +16,7 @@ export class ResponseSyncInterceptor implements NestInterceptor {
         const response = context.switchToHttp().getResponse();
 
         // Synchronize the HTTP status code with the one in StandardResponse
-        if (data && typeof data.status === 'number') {
+        if (data && typeof data.status === "number") {
           response.status(data.status);
         }
 
