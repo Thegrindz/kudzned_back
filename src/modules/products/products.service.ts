@@ -33,7 +33,7 @@ export class ProductsService {
         min_price,
         max_price,
         tags,
-        status = ProductStatus.ACTIVE,
+       // status = ProductStatus.ACTIVE,
         sort_by = 'created_at',
         sort_order = 'DESC',
       } = query;
@@ -42,7 +42,7 @@ export class ProductsService {
         .createQueryBuilder('product')
         .leftJoinAndSelect('product.category', 'category')
         .leftJoinAndSelect('product.vendor', 'vendor')
-        .where('product.status = :status', { status });
+       // .where('product.status = :status', { status });
 
       if (search) {
         queryBuilder.andWhere(
