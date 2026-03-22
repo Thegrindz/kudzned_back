@@ -183,12 +183,26 @@ export class TatumService {
   async setupWallets() {
     try {
       const btcWallet = await this.generateBTCWallet();
-      this.logger.log(`BTC Wallet generated: xpub: ${btcWallet.xpub}`);
-
       const ethWallet = await this.generateETHWallet();
-      this.logger.log(`ETH Wallet generated: xpub: ${ethWallet.xpub}`);
 
-      return { btcXpub: btcWallet.xpub, ethXpub: ethWallet.xpub };
+      // Log xpubs only — never log mnemonics
+      this.logger.log(`BTC Wallet generated — xpub: ${btcWallet.xpub}`);
+      this.logger.log(`ETH Wallet generated — xpub: ${ethWallet.xpub}`);
+
+      // ⚠️  CRITICAL — this is the ONLY time you will ever see these mnemonics.
+      // Copy them immediately and store offline in a password manager.
+      // They are NOT saved anywhere in the database or logs.
+      // If you lose them you lose access to all funds deposited into these wallets.
+      return {
+        btc: {
+          mnemonic: btcWallet.mnemonic, // ← save this somewhere safe RIGHT NOW
+          xpub: btcWallet.xpub,         // ← copy this into BTC_XPUB in your .env
+        },
+        eth: {
+          mnemonic: ethWallet.mnemonic, // ← save this somewhere safe RIGHT NOW
+          xpub: ethWallet.xpub,         // ← copy this into ETH_XPUB in your .env
+        },
+      };
     } catch (error) {
       this.logger.error(`Failed to setup wallets: ${error.message}`);
       throw error;
