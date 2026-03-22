@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { HttpService } from "@nestjs/axios";
 import { firstValueFrom } from "rxjs";
-import * as crypto from "crypto";
+import { createHmac } from "node:crypto";
 
 @Injectable()
 export class TatumService {
@@ -82,38 +82,53 @@ export class TatumService {
     }
   }
 
-  async createSubscription(address: string, chain: "BTC" | "ETH") {
-    const backendUrlRaw = this.configService.get<string>("BACKEND_URL");
-    const backendUrl = (backendUrlRaw || "").trim().replace(/\/+$/, "");
-
-    if (!backendUrl) {
-      this.logger.warn(
-        `Skipping Tatum subscription for ${address} because BACKEND_URL is not configured.`,
-      );
-      return { skipped: true, reason: "backend_url_missing" };
-    }
-
-    if (
-      backendUrl.includes("localhost") ||
-      backendUrl.includes("127.0.0.1") ||
-      !/^https:\/\/.+/i.test(backendUrl)
-    ) {
-      this.logger.warn(
-        `Skipping Tatum subscription for ${address} because BACKEND_URL must be a publicly reachable https URL. Current BACKEND_URL: ${backendUrl}`,
-      );
-      return { skipped: true, reason: "backend_url_invalid" };
+  // ─── STEP 1 (one-time setup) ────────────────────────────────────────────────
+  // Call this ONCE to register your HMAC secret with Tatum.
+  // After this, every webhook Tatum fires will include an x-payload-hash header
+  // signed with this secret. You can call it from an admin endpoint or on app startup.
+  //
+  // PUT https://api.tatum.io/v4/subscription
+  // { "hmacSecret": "<your-secret>" }
+  // ────────────────────────────────────────────────────────────────────────────
+  async enableWebhookHmac(): Promise<void> {
+    const hmacSecret = this.configService.get<string>("TATUM_WEBHOOK_SECRET");
+    if (!hmacSecret) {
+      throw new Error("TATUM_WEBHOOK_SECRET is not configured");
     }
 
     try {
+      await firstValueFrom(
+        this.httpService.put(
+          `${this.baseUrlV4}/subscription`,
+          { hmacSecret },
+          { headers: { "x-api-key": this.apiKey } },
+        ),
+      );
+      this.logger.log("Tatum HMAC webhook secret registered successfully");
+    } catch (error) {
+      this.logger.error(
+        `Failed to register Tatum HMAC secret: ${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  // ─── STEP 2 ─────────────────────────────────────────────────────────────────
+  // Subscribe to ADDRESS_EVENT (v4 name) for a given address.
+  // Tatum will POST to your webhook URL whenever a transaction hits that address.
+  // ────────────────────────────────────────────────────────────────────────────
+  async createSubscription(address: string, chain: "BTC" | "ETH") {
+    try {
       const response = await firstValueFrom(
         this.httpService.post(
-          `${this.baseUrlV3}/subscription`,
+          // Note: append ?type=mainnet or ?type=testnet based on your environment
+          `${this.baseUrlV4}/subscription`,
           {
-            type: "ADDRESS_TRANSACTION",
+            type: "ADDRESS_EVENT", // correct v4 type (not ADDRESS_TRANSACTION)
             attr: {
               address,
               chain,
-              url: `${backendUrl}/api/v1/wallets/webhooks/tatum`,
+              url: `${this.configService.get("BACKEND_URL")}/wallets/webhooks/tatum`,
             },
           },
           {
@@ -121,14 +136,12 @@ export class TatumService {
           },
         ),
       );
-      return response.data;
+      this.logger.log(
+        `Subscription created for ${chain} address ${address}: id=${response.data.id}`,
+      );
+      return response.data; // { id: "..." }
     } catch (error) {
       this.logger.error(`Failed to create subscription: ${error.message}`);
-      if (error.response) {
-        this.logger.error(
-          `Error details: ${JSON.stringify(error.response.data)}`,
-        );
-      }
       throw error;
     }
   }
@@ -182,11 +195,23 @@ export class TatumService {
     }
   }
 
-  // FIX #1 — Verify Tatum webhook HMAC-SHA512 signature to prevent anyone from
-  // sending fake deposit payloads. Tatum signs the raw request body with your
-  // TATUM_WEBHOOK_SECRET and puts the hex digest in the x-payload-hash header.
-  verifyWebhookSignature(rawBody: Buffer, signature: string): boolean {
-    if (!signature) return false;
+  // ─── STEP 4 (per official Tatum docs) ───────────────────────────────────────
+  // Verify an incoming webhook is genuinely from Tatum.
+  //
+  // How it works (from official docs):
+  //   1. Tatum stringifies the JSON body (no spaces): JSON.stringify(body)
+  //   2. Signs it with HMAC-SHA512 using your hmacSecret
+  //   3. Encodes the result as Base64  ← IMPORTANT: Base64, NOT hex
+  //   4. Sends it in the x-payload-hash request header
+  //
+  // We reproduce the same calculation and compare the values.
+  // No rawBody needed — we sign the parsed JSON body re-stringified.
+  // ────────────────────────────────────────────────────────────────────────────
+  verifyWebhookSignature(body: Record<string, any>, signature: string): boolean {
+    if (!signature) {
+      this.logger.warn("Webhook received with no x-payload-hash header");
+      return false;
+    }
 
     const secret = this.configService.get<string>("TATUM_WEBHOOK_SECRET");
     if (!secret) {
@@ -194,19 +219,22 @@ export class TatumService {
       return false;
     }
 
-    const hmac = crypto.createHmac("sha512", secret);
-    hmac.update(rawBody);
-    const computed = hmac.digest("hex");
+    // Tatum signs JSON.stringify(body) — no spaces, keys in arrival order
+    const stringifiedBody = JSON.stringify(body);
 
-    // timingSafeEqual prevents timing-based attacks
-    try {
-      return crypto.timingSafeEqual(
-        Buffer.from(computed, "hex"),
-        Buffer.from(signature, "hex"),
+    // Digest must be Base64, not hex (confirmed by official Tatum docs)
+    const computedBase64 = createHmac("sha512", secret)
+      .update(stringifiedBody)
+      .digest("base64");
+
+    const isValid = computedBase64 === signature;
+
+    if (!isValid) {
+      this.logger.warn(
+        `Webhook signature mismatch. computed=${computedBase64} received=${signature}`,
       );
-    } catch {
-      // Buffers were different lengths — signature is invalid
-      return false;
     }
+
+    return isValid;
   }
 }

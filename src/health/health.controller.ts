@@ -24,7 +24,7 @@ export class HealthController {
   @Get()
   @ApiOperation({
     summary: "Health check",
-    description: "Check if the service is running",
+    description: "Check if the service is running and also ping it. to be sure",
   })
   @ApiResponse({
     status: 200,

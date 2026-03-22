@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module, OnModuleInit, Logger } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { HttpModule } from "@nestjs/axios";
 
@@ -31,4 +31,21 @@ import { ResponseService } from "@/common/services/response.service";
   ],
   exports: [WalletsService],
 })
-export class WalletsModule {}
+export class WalletsModule implements OnModuleInit {
+  private readonly logger = new Logger(WalletsModule.name);
+
+  constructor(private readonly tatumService: TatumService) {}
+
+  async onModuleInit() {
+    try {
+      await this.tatumService.enableWebhookHmac();
+    } catch (error) {
+      // Log the error but don't crash the app — the secret may already be. 
+      // registered from a previous run, or Tatum may be temporarily unreachable.
+      // Webhooks will still work as long as the secret was registered before.
+      this.logger.error(
+        `Failed to register Tatum HMAC secret on startup: ${error.message}`,
+      );
+    }
+  }
+}

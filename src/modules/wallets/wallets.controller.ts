@@ -46,7 +46,7 @@ export class WalletsController {
     return this.walletsService.getWalletByUserId(req.user.id);
   }
 
-  // FIX #7 — Added missing @ApiBearerAuth so Swagger shows the lock icon
+  // FIX #7 — Added missing @ApiBearerAuth so Swagger shows the auth lock icon
   @ApiBearerAuth("JWT-auth")
   @UseGuards(JwtAuthGuard)
   @Get("balance")
@@ -110,7 +110,24 @@ export class WalletsController {
     return this.walletsService.getTransaction(req.user.id, id);
   }
 
-  // Webhooks are public (no JWT guard) — secured via HMAC signature instead
+  // ─── Tatum Webhook (public — secured via HMAC signature) ────────────────────
+  //
+  // Tatum sends a POST with this JSON body shape (ADDRESS_EVENT subscription):
+  // {
+  //   address:          string   — the monitored address that was involved
+  //   txId:             string   — the transaction hash
+  //   blockNumber:      number   — block number (absent if mempool/pending)
+  //   asset:            string   — "BTC", "ETH", or token contract address
+  //   amount:           string   — coin amount as a string, in native units (e.g. "0.001")
+  //   type:             string   — "incoming" | "outgoing" | "native" etc.
+  //   chain:            string   — e.g. "bitcoin-mainnet", "ethereum-mainnet"
+  //   subscriptionType: string   — "ADDRESS_EVENT"
+  //   counterAddress:   string?  — the other side of the tx (may be absent on UTXO)
+  //   mempool:          boolean? — true if tx is not yet in a block (EVM only)
+  // }
+  //
+  // And an x-payload-hash header = Base64(HMAC-SHA512(JSON.stringify(body), secret))
+  // ────────────────────────────────────────────────────────────────────────────
   @Post("webhooks/tatum")
   @ApiOperation({
     summary: "Tatum webhook",
@@ -121,34 +138,55 @@ export class WalletsController {
   @ApiResponse({ status: 401, description: "Invalid webhook signature" })
   async handleTatumWebhook(
     @Body() payload: any,
-    // FIX #1 — Read the HMAC signature Tatum sends in this header
     @Headers("x-payload-hash") signature: string,
-    @Req() req: any,
   ): Promise<StandardResponse<any>> {
-    // FIX #1 — Reject any request that doesn't carry a valid HMAC signature.
-    // req.rawBody requires { rawBody: true } in NestFactory.create() — see main.ts note below.
-    const isValid = this.tatumService.verifyWebhookSignature(
-      req.rawBody,
-      signature,
-    );
+    // FIX #1 — Verify the HMAC signature using the parsed body (not rawBody).
+    // Per Tatum docs: they sign JSON.stringify(body) and encode as Base64.
+    // No { rawBody: true } change to main.ts is needed.
+    const isValid = this.tatumService.verifyWebhookSignature(payload, signature);
 
     if (!isValid) {
       throw new UnauthorizedException("Invalid webhook signature");
     }
 
-    // FIX #3 — Tatum sends amounts in native coin units (e.g. 0.001 BTC, 0.05 ETH).
-    // Conversion to satoshis happens inside processCryptoDeposit.
-    const { address, txId, chain, amount } = payload;
-    const currency = chain as "BTC" | "ETH";
+    // Only process confirmed (in-block) transactions.
+    // Tatum sends a first webhook when the tx hits the mempool (EVM chains only)
+    // with mempool: true — we skip that and wait for the confirmed one.
+    if (payload.mempool === true) {
+      return { success: true, message: "Mempool tx received, awaiting confirmation" } as any;
+    }
 
+    // Only credit incoming transactions
+    if (payload.type === "outgoing") {
+      return { success: true, message: "Outgoing tx ignored" } as any;
+    }
+
+    // Determine currency from the chain field Tatum sends.
+    // e.g. "bitcoin-mainnet" → BTC, "ethereum-mainnet" → ETH
+    const chainStr: string = (payload.chain ?? "").toLowerCase();
+    let currency: "BTC" | "ETH";
+
+    if (chainStr.includes("bitcoin")) {
+      currency = "BTC";
+    } else if (chainStr.includes("ethereum")) {
+      currency = "ETH";
+    } else {
+      // Unsupported chain — log and acknowledge so Tatum doesn't keep retrying
+      this.tatumService["logger"].warn(`Unsupported chain in webhook: ${payload.chain}`);
+      return { success: true, message: `Chain ${payload.chain} not handled` } as any;
+    }
+
+    // FIX #3 — amount arrives as a string in native coin units ("0.001" BTC etc.)
+    // Conversion to satoshis happens inside processCryptoDeposit.
     return this.walletsService.processCryptoDeposit(
-      address,
-      parseFloat(amount),
-      txId,
+      payload.address,
+      parseFloat(payload.amount),
+      payload.txId,
       currency,
     );
   }
 
+  // Legacy webhook kept for backward compatibility
   @Post("webhooks/btc-payment")
   @ApiOperation({
     summary: "BTC payment webhook (Legacy)",
@@ -166,11 +204,3 @@ export class WalletsController {
     );
   }
 }
-
-/*
- * NOTE — main.ts change required for req.rawBody to work:
- *
- *   const app = await NestFactory.create(AppModule, { rawBody: true });
- *
- * Without this, req.rawBody will be undefined and every webhook will be rejected.
- */
