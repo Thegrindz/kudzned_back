@@ -10,6 +10,18 @@ import {
 } from "../../common/services/response.service";
 import { TatumService } from "./tatum.service";
 
+// ─── ETH derivation note ─────────────────────────────────────────────────────
+// ETH_XPUB is at depth 4 (m/44'/60'/0'/0) — the full address-level path.
+// This means Tatum correctly derives addresses as xpub/index which maps
+// directly to MetaMask's Account 1 (index 0), Account 2 (index 1), etc.
+// No extra branch derivation is needed unlike BTC.
+//
+// To verify in MetaMask:
+//   Account 1 = index 0  (created automatically on import)
+//   Account 2 = index 1  (Add account → Add a new Ethereum account)
+//   Account N = index N-1
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Injectable()
 export class ETHService {
   private readonly logger = new Logger(ETHService.name);
@@ -30,12 +42,12 @@ export class ETHService {
         return this.responseService.badRequest("ETH_XPUB not configured");
       }
 
-      // FIX #4 — Use the global address count (across ALL wallets) as the HD
-      // derivation index. Using a per-wallet count meant two simultaneous requests
-      // for different wallets could both derive index 0 from the same xpub and
-      // produce the same address.
+      // FIX #4 — Use global address count as the derivation index so two
+      // simultaneous requests never derive the same address.
       const index = await this.ethAddressRepository.count();
 
+      // ETH_XPUB is already at depth 4 (m/44'/60'/0'/0) so Tatum derives
+      // xpub/index which matches MetaMask Account (index+1) directly.
       const addressData = await this.tatumService.generateETHAddress(
         xpub,
         index,
@@ -55,8 +67,8 @@ export class ETHService {
       try {
         await this.tatumService.createSubscription(addressData.address, "ETH");
       } catch (subError) {
-        // Don't fail the whole request — the address is valid, just not yet monitored.
-        // A background job should retry any address where is_monitored = false.
+        // Don't fail the whole request — address is valid, just not yet monitored.
+        // A background job should retry addresses where is_monitored = false.
         this.logger.error(
           `Subscription failed for ETH address ${addressData.address}: ${subError.message}`,
         );

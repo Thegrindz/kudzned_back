@@ -200,19 +200,19 @@ export class WalletsController {
   //   4. Copy eth.xpub → paste into ETH_XPUB in your .env
   //   5. Delete this endpoint and redeploy
   // ────────────────────────────────────────────────────────────────────────────
-  @Get("admin/setup-wallets")
-  @ApiOperation({
-    summary: "⚠️ ONE-TIME SETUP ONLY — Generate BTC & ETH HD wallets",
-    description:
-      "Returns mnemonics and xpubs. DELETE THIS ENDPOINT after first use. Never expose in production.",
-  })
-  @ApiResponse({
-    status: 200,
-    description: "Wallets generated. Copy mnemonics immediately — they are not stored anywhere.",
-  })
-  async setupWallets() {
-    return this.tatumService.setupWallets();
-  }
+  // @Get("admin/setup-wallets")
+  // @ApiOperation({
+  //   summary: "⚠️ ONE-TIME SETUP ONLY — Generate BTC & ETH HD wallets",
+  //   description:
+  //     "Returns mnemonics and xpubs. DELETE THIS ENDPOINT after first use. Never expose in production.",
+  // })
+  // @ApiResponse({
+  //   status: 200,
+  //   description: "Wallets generated. Copy mnemonics immediately — they are not stored anywhere.",
+  // })
+  // async setupWallets() {
+  //   return this.tatumService.setupWallets();
+  // }
 
   // Legacy webhook kept for backward compatibility
   @Post("webhooks/btc-payment")
