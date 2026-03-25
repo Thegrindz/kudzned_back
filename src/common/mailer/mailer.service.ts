@@ -132,17 +132,9 @@ export class MailService {
       // Replace order items dynamically
       const itemsHtml = data.orderItems.map(item => `
       <div class="product-item">
-        <div class="product-image">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-            <line x1="7" y1="7" x2="7.01" y2="7"/>
-          </svg>
-        </div>
-        <div class="product-details">
-          <div class="product-name">${item.name}</div>
-          <div class="product-description">${item.description}</div>
-          <div class="product-price">$${item.price}</div>
-        </div>
+        <div class="product-name">${item.name}</div>
+        <div class="product-description">${item.description}</div>
+        <div class="product-price">$${item.price}</div>
       </div>
       `).join('');
 
