@@ -12,22 +12,42 @@ import { OrderItem } from "../../database/entities/order-item.entity";
 import { Cart } from "../../database/entities/cart.entity";
 import { CartItem } from "../../database/entities/cart-item.entity";
 import { DownloadLink } from "../../database/entities/download-link.entity";
+import { Wallet } from "../../database/entities/wallet.entity";
+import { Transaction } from "../../database/entities/transaction.entity";
 
 import { ResponseService } from "../../common/services/response.service";
-import { WalletsModule } from "../wallets/wallets.module";
-import { ProductsModule } from "../products/products.module";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { MailService } from "@/common/mailer/mailer.service";
+import { ProductsService } from "../products/products.service";
+import { Product } from "@/database/entities/product.entity";
+import { DigitalFile } from "@/database/entities/digital-file.entity";
+import { CloudinaryService } from "@/common/services/cloudinary.service";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Order, OrderItem, Cart, CartItem, DownloadLink]),
-    WalletsModule,
-    ProductsModule,
+    TypeOrmModule.forFeature([
+      Order,
+      OrderItem,
+      Cart,
+      CartItem,
+      DownloadLink,
+      Wallet,
+      Transaction,
+      Product,
+      DigitalFile,
+    ]),
     NotificationsModule,
   ],
   controllers: [OrdersController, CartController],
-  providers: [OrdersService, CartService, FulfillmentService, ResponseService,MailService],
+  providers: [
+    OrdersService,
+    CartService,
+    FulfillmentService,
+    ResponseService,
+    MailService,
+    ProductsService,
+    CloudinaryService,
+  ],
   exports: [OrdersService],
 })
 export class OrdersModule {}
