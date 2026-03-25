@@ -513,6 +513,51 @@ export class WalletsService {
     }
   }
 
+  async resetWalletBalance(userId: string): Promise<StandardResponse<any>> {
+    try {
+      const wallet = await this.walletRepository.findOne({
+        where: { user_id: userId },
+        relations: ["user"],
+      });
+
+      if (!wallet) {
+        return this.responseService.notFound("Wallet not found");
+      }
+
+      // Reset to $3.94 = 394 cents
+      const targetBalance = 394; // cents
+      
+      await this.walletRepository.update(wallet.id, {
+        balance: targetBalance,
+        available_balance: targetBalance,
+        total_deposited: targetBalance,
+        updated_at: new Date(),
+      });
+
+      // Send notification
+      await this.notificationsService.createNotification({
+        user_id: userId,
+        type: NotificationType.SYSTEM,
+        title: "Wallet Balance Reset",
+        message: `Your wallet balance has been reset to $${(targetBalance / 100).toFixed(2)}`,
+        skipEmail: true,
+      });
+
+      return this.responseService.success(
+        "Wallet balance reset successfully",
+        {
+          new_balance: (targetBalance / 100).toFixed(2),
+          reset_amount: (targetBalance / 100).toFixed(2),
+        }
+      );
+    } catch (error) {
+      return this.responseService.internalServerError(
+        "Failed to reset wallet balance",
+        { error: error.message }
+      );
+    }
+  }
+
   // Deprecated: kept for backward compatibility — delegates to processCryptoDeposit
   async processBTCDeposit(
     address: string,

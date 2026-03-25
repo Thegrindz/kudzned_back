@@ -294,4 +294,15 @@ export class WalletsController {
       } as any;
     }
   }
+
+  @ApiBearerAuth("JWT-auth")
+  @UseGuards(JwtAuthGuard)
+  @Post("reset-balance")
+  @ApiOperation({
+    summary: "Reset wallet balance to $3.94",
+    description: "Reset user wallet balance to $3.94 (for testing purposes)",
+  })
+  async resetWalletBalance(@Req() req: any): Promise<StandardResponse<any>> {
+    return this.walletsService.resetWalletBalance(req.user.id);
+  }
 }
