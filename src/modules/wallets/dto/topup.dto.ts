@@ -17,11 +17,11 @@ export class TopupDto {
     description:
       "Amount to deposit in base units (satoshis for BTC, wei for ETH) (optional)",
     example: 100000,
-    minimum: 1000,
+    minimum: 1,
     required: false,
   })
   @IsOptional()
   @IsNumber()
-  @Min(1000)
+  @Min(1)
   amount?: number;
 }
