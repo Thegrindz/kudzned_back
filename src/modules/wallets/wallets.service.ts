@@ -17,6 +17,8 @@ import {
 import { BTCService } from "./btc.service";
 import { ETHService } from "./eth.service";
 import { TatumService } from "./tatum.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { NotificationType } from "../../database/entities/notification.entity";
 
 // ─── Balance storage convention ──────────────────────────────────────────────
 // All wallet balances are stored in USD CENTS (integer).
@@ -55,6 +57,7 @@ export class WalletsService {
     private btcService: BTCService,
     private ethService: ETHService,
     private tatumService: TatumService,
+    private notificationsService: NotificationsService,
     private responseService: ResponseService,
   ) {}
 
@@ -150,6 +153,20 @@ export class WalletsService {
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
       };
 
+      // Send notification for deposit address creation
+      await this.notificationsService.createNotification({
+        user_id: userId,
+        type: NotificationType.SYSTEM,
+        title: "Deposit Address Generated",
+        message: `A new ${currency} deposit address has been generated for you. Send ${currency} to this address to fund your wallet.`,
+        data: { 
+          address: addressResult.data.address,
+          currency,
+          expires_at: topupData.expires_at
+        },
+        skipEmail: true, // Skip email for this operational notification
+      });
+
       return this.responseService.success(
         "Deposit address created successfully",
         topupData,
@@ -180,7 +197,7 @@ export class WalletsService {
     orderId: string,
   ): Promise<StandardResponse<any>> {
     try {
-      return await this.walletRepository.manager.transaction(
+      const result = await this.walletRepository.manager.transaction(
         async (manager) => {
           const wallet = await manager.findOne(Wallet, {
             where: { user_id: userId },
@@ -221,6 +238,23 @@ export class WalletsService {
           );
         },
       );
+
+      // Send notification for successful purchase if transaction was successful
+      if (result.success) {
+        await this.notificationsService.createNotification({
+          user_id: userId,
+          type: NotificationType.PAYMENT_RECEIVED,
+          title: "Payment Processed",
+          message: `Your payment of $${(amount / 100).toFixed(2)} USD for order ${orderId} has been processed successfully.`,
+          data: { 
+            amount_usd: (amount / 100).toFixed(2),
+            amount_cents: amount,
+            orderId 
+          },
+        });
+      }
+
+      return result;
     } catch (error) {
       return this.responseService.internalServerError(
         "Failed to deduct balance",
@@ -235,7 +269,7 @@ export class WalletsService {
     orderId: string,
   ): Promise<StandardResponse<any>> {
     try {
-      return await this.walletRepository.manager.transaction(
+      const result = await this.walletRepository.manager.transaction(
         async (manager) => {
           const wallet = await manager.findOne(Wallet, {
             where: { user_id: userId },
@@ -268,6 +302,24 @@ export class WalletsService {
           );
         },
       );
+
+      // Send notification for successful refund if transaction was successful
+      if (result.success) {
+        await this.notificationsService.createNotification({
+          user_id: userId,
+          type: NotificationType.PAYMENT_RECEIVED,
+          title: "Refund Processed",
+          message: `Your refund of $${(amount / 100).toFixed(2)} USD for order ${orderId} has been processed and added to your wallet.`,
+          data: { 
+            amount_usd: (amount / 100).toFixed(2),
+            amount_cents: amount,
+            orderId,
+            type: 'refund'
+          },
+        });
+      }
+
+      return result;
     } catch (error) {
       return this.responseService.internalServerError(
         "Failed to process refund",
@@ -387,6 +439,27 @@ export class WalletsService {
           return savedTransaction;
         },
       );
+
+      // Send notification for successful deposit
+      const wallet = await this.walletRepository.findOne({
+        where: { id: cryptoAddressRecord.wallet_id },
+      });
+      
+      if (wallet) {
+        await this.notificationsService.createNotification({
+          user_id: wallet.user_id,
+          type: NotificationType.DEPOSIT_CONFIRMED,
+          title: `${currency} Deposit Confirmed`,
+          message: `Your ${currency} deposit of ${amount} ${currency} ($${(usdCents / 100).toFixed(2)} USD) has been confirmed and added to your wallet.`,
+          data: { 
+            amount, 
+            currency, 
+            amount_usd: (usdCents / 100).toFixed(2),
+            txHash,
+            address 
+          },
+        });
+      }
 
       return this.responseService.success(
         `${currency} deposit processed successfully`,

@@ -8,6 +8,7 @@ import { BTCService } from "./btc.service";
 import { ETHService } from "./eth.service";
 import { TatumService } from "./tatum.service";
 import { TransactionService } from "./transaction.service";
+import { NotificationsModule } from "../notifications/notifications.module";
 
 import { Wallet } from "../../database/entities/wallet.entity";
 import { Transaction } from "../../database/entities/transaction.entity";
@@ -19,6 +20,7 @@ import { ResponseService } from "@/common/services/response.service";
   imports: [
     TypeOrmModule.forFeature([Wallet, Transaction, BTCAddress, ETHAddress]),
     HttpModule,
+    NotificationsModule,
   ],
   controllers: [WalletsController],
   providers: [
