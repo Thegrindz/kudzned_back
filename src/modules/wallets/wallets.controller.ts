@@ -9,6 +9,7 @@ import {
   Req,
   Headers,
   UnauthorizedException,
+  Logger,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -29,6 +30,8 @@ import { BTCWebhookDto } from "./dto/btc-webhook.dto";
 @ApiTags("Wallets")
 @Controller("wallets")
 export class WalletsController {
+  private readonly logger = new Logger(WalletsController.name);
+
   constructor(
     private readonly walletsService: WalletsService,
     private readonly tatumService: TatumService,
@@ -230,5 +233,65 @@ export class WalletsController {
       webhookDto.amount,
       webhookDto.tx_hash,
     );
+  }
+
+  // ─── DEBUG: Check Tatum subscriptions and account status ─────────────────────
+  @Get("debug/tatum-status")
+  @ApiOperation({
+    summary: "Debug Tatum subscriptions",
+    description: "Check existing subscriptions and account status (development only)",
+  })
+  @ApiResponse({ status: 200, description: "Tatum status retrieved successfully" })
+  async checkTatumStatus(): Promise<StandardResponse<any>> {
+    try {
+      const status = await this.tatumService.checkSubscriptionsAndAccount();
+      return {
+        success: true,
+        message: "Tatum status retrieved successfully",
+        data: status,
+      } as any;
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to retrieve Tatum status",
+        error: error.message,
+      } as any;
+    }
+  }
+
+  // ─── DEBUG: Test exchange rate API ─────────────────────────────────────────────
+  @Get("debug/exchange-rates")
+  @ApiOperation({
+    summary: "Test exchange rate APIs",
+    description: "Test BTC/USD and ETH/USD exchange rate APIs (development only)",
+  })
+  @ApiResponse({ status: 200, description: "Exchange rates retrieved successfully" })
+  async testExchangeRates(): Promise<StandardResponse<any>> {
+    try {
+      this.logger.log('🧪 Testing exchange rate APIs...');
+      
+      const btcRate = await this.tatumService.getExchangeRate("BTC", "USD");
+      const ethRate = await this.tatumService.getExchangeRate("ETH", "USD");
+      
+      this.logger.log(`💰 BTC/USD Rate: $${btcRate}`);
+      this.logger.log(`💰 ETH/USD Rate: $${ethRate}`);
+      
+      return {
+        success: true,
+        message: "Exchange rates retrieved successfully",
+        data: {
+          btc_usd: btcRate,
+          eth_usd: ethRate,
+          timestamp: new Date().toISOString()
+        }
+      } as any;
+    } catch (error) {
+      this.logger.error(`❌ Failed to get exchange rates: ${error.message}`);
+      return {
+        success: false,
+        message: "Failed to retrieve exchange rates",
+        error: error.message,
+      } as any;
+    }
   }
 }

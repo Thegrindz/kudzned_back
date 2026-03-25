@@ -119,46 +119,172 @@ export class TatumService {
   // ────────────────────────────────────────────────────────────────────────────
   async createSubscription(address: string, chain: "BTC" | "ETH") {
     try {
+      const webhookUrl = `${this.configService.get("BACKEND_URL")}/wallets/webhooks/tatum`;
+      
+      this.logger.log(`Creating Tatum subscription for ${chain} address: ${address}`);
+      this.logger.log(`Webhook URL: ${webhookUrl}`);
+      this.logger.log(`Using API Key: ${this.apiKey ? this.apiKey.substring(0, 10) + '...' : 'NOT_SET'}`);
+      
+      const subscriptionPayload = {
+        type: "ADDRESS_EVENT",
+        attr: {
+          address,
+          chain,
+          url: webhookUrl,
+        },
+      };
+      
+      this.logger.log(`Subscription payload: ${JSON.stringify(subscriptionPayload, null, 2)}`);
+
       const response = await firstValueFrom(
         this.httpService.post(
-          // Note: append ?type=mainnet or ?type=testnet based on your environment
           `${this.baseUrlV4}/subscription`,
+          subscriptionPayload,
           {
-            type: "ADDRESS_EVENT", // correct v4 type (not ADDRESS_TRANSACTION)
-            attr: {
-              address,
-              chain,
-              url: `${this.configService.get("BACKEND_URL")}/wallets/webhooks/tatum`,
+            headers: { 
+              "x-api-key": this.apiKey,
+              "Content-Type": "application/json"
             },
-          },
-          {
-            headers: { "x-api-key": this.apiKey },
+            timeout: 30000, // 30 second timeout
           },
         ),
       );
+
       this.logger.log(
-        `Subscription created for ${chain} address ${address}: id=${response.data.id}`,
+        `✅ Subscription created successfully for ${chain} address ${address}: id=${response.data.id}`,
       );
+      this.logger.log(`Full response: ${JSON.stringify(response.data, null, 2)}`);
+      
       return response.data; // { id: "..." }
     } catch (error) {
-      this.logger.error(`Failed to create subscription: ${error.message}`);
+      this.logger.error(`❌ Failed to create subscription for ${chain} address ${address}`);
+      
+      // Log detailed error information
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        this.logger.error(`Error Status: ${error.response.status}`);
+        this.logger.error(`Error Status Text: ${error.response.statusText}`);
+        this.logger.error(`Error Headers: ${JSON.stringify(error.response.headers, null, 2)}`);
+        this.logger.error(`Error Data: ${JSON.stringify(error.response.data, null, 2)}`);
+        
+        // Common Tatum error scenarios
+        if (error.response.status === 401) {
+          this.logger.error('🔑 Authentication failed - Check your TATUM_API_KEY');
+        } else if (error.response.status === 402) {
+          this.logger.error('💰 Payment required - Check your Tatum account credits');
+        } else if (error.response.status === 429) {
+          this.logger.error('⏱️ Rate limit exceeded - Too many requests');
+        } else if (error.response.status === 400) {
+          this.logger.error('📝 Bad request - Check subscription payload format');
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        this.logger.error('🌐 Network error - No response received from Tatum');
+        this.logger.error(`Request config: ${JSON.stringify(error.config, null, 2)}`);
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        this.logger.error(`⚙️ Setup error: ${error.message}`);
+      }
+      
+      this.logger.error(`Full error object: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`);
       throw error;
     }
   }
 
-  async getExchangeRate(from: string, to: string = "BTC") {
+  // ─── DEBUG: Check existing subscriptions and account status ──────────────────
+  async checkSubscriptionsAndAccount() {
     try {
-      const response = await firstValueFrom(
+      this.logger.log('🔍 Checking Tatum account status and existing subscriptions...');
+      
+      // Check existing subscriptions with required pagination
+      const subscriptionsResponse = await firstValueFrom(
         this.httpService.get(
-          `${this.baseUrlV3}/tatum/exchange-rate/rate/${from}?basePair=${to}`,
+          `${this.baseUrlV4}/subscription?pageSize=50&offset=0`,
           {
-            headers: { "x-api-key": this.apiKey },
+            headers: { 
+              "x-api-key": this.apiKey,
+              "Content-Type": "application/json"
+            },
           },
         ),
       );
-      return response.data.value;
+      
+      this.logger.log(`📋 Existing subscriptions count: ${subscriptionsResponse.data.length || 0}`);
+      this.logger.log(`📋 Existing subscriptions: ${JSON.stringify(subscriptionsResponse.data, null, 2)}`);
+      
+      // Check account details/credits if endpoint is available
+      try {
+        const accountResponse = await firstValueFrom(
+          this.httpService.get(
+            `${this.baseUrlV3}/tatum/account`,
+            {
+              headers: { 
+                "x-api-key": this.apiKey,
+                "Content-Type": "application/json"
+              },
+            },
+          ),
+        );
+        this.logger.log(`💳 Account details: ${JSON.stringify(accountResponse.data, null, 2)}`);
+      } catch (accountError) {
+        this.logger.warn(`Could not fetch account details: ${accountError.message}`);
+      }
+      
+      return {
+        subscriptions: subscriptionsResponse.data,
+        count: subscriptionsResponse.data.length || 0
+      };
     } catch (error) {
-      this.logger.error(`Failed to get exchange rate: ${error.message}`);
+      this.logger.error(`❌ Failed to check subscriptions: ${error.message}`);
+      if (error.response) {
+        this.logger.error(`Error Status: ${error.response.status}`);
+        this.logger.error(`Error Data: ${JSON.stringify(error.response.data, null, 2)}`);
+      }
+      throw error;
+    }
+  }
+
+  async getExchangeRate(from: string, to: string = "USD") {
+    try {
+      const url = `${this.baseUrlV4}/data/rate/symbol?symbol=${from}&basePair=${to}`;
+      this.logger.log(`📈 Fetching exchange rate: ${from}/${to} from ${url}`);
+      
+      const response = await firstValueFrom(
+        this.httpService.get(
+          url,
+          {
+            headers: { 
+              "x-api-key": this.apiKey,
+              "Content-Type": "application/json"
+            },
+            timeout: 10000, // 10 second timeout
+          },
+        ),
+      );
+      
+      const rate = response.data.value;
+      this.logger.log(`✅ ${from}/${to} exchange rate: ${rate}`);
+      this.logger.log(`📊 Full response: ${JSON.stringify(response.data, null, 2)}`);
+      
+      return rate;
+    } catch (error) {
+      this.logger.error(`❌ Failed to get ${from}/${to} exchange rate: ${error.message}`);
+      
+      // Log detailed error information
+      if (error.response) {
+        this.logger.error(`Error Status: ${error.response.status}`);
+        this.logger.error(`Error Data: ${JSON.stringify(error.response.data, null, 2)}`);
+        
+        if (error.response.status === 401) {
+          this.logger.error('🔑 Exchange rate API authentication failed - Check your TATUM_API_KEY');
+        } else if (error.response.status === 429) {
+          this.logger.error('⏱️ Exchange rate API rate limit exceeded');
+        } else if (error.response.status === 402) {
+          this.logger.error('💰 Exchange rate API payment required - Check credits');
+        }
+      }
+      
       return null;
     }
   }
