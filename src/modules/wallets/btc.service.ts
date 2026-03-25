@@ -11,6 +11,8 @@ import {
   StandardResponse,
 } from "../../common/services/response.service";
 import { TatumService } from "./tatum.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { NotificationType } from "../../database/entities/notification.entity";
 
 // ─── HD derivation helpers (no external deps) ───────────────────────────────
 // These are needed because BTC_XPUB is the account xpub at depth m/84'/0'/0'.
@@ -169,6 +171,7 @@ export class BTCService {
     private httpService: HttpService,
     private responseService: ResponseService,
     private tatumService: TatumService,
+    private notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -224,6 +227,28 @@ export class BTCService {
 
       try {
         await this.tatumService.createSubscription(addressData.address, "BTC");
+        
+        // Get wallet with user relation to send success notification
+        const wallet = await this.btcAddressRepository
+          .createQueryBuilder("btcAddress")
+          .leftJoinAndSelect("btcAddress.wallet", "wallet")
+          .leftJoinAndSelect("wallet.user", "user")
+          .where("btcAddress.id = :addressId", { addressId: savedAddress.id })
+          .getOne();
+
+        if (wallet?.wallet?.user_id) {
+          await this.notificationsService.createNotification({
+            user_id: wallet.wallet.user_id,
+            type: NotificationType.SYSTEM,
+            title: "✅ BTC Address Ready for Deposits",
+            message: `Your BTC deposit address ${addressData.address} is now active and monitored. You can safely send funds to this address.`,
+            data: { 
+              address: addressData.address,
+              currency: "BTC"
+            },
+            skipEmail: true, // Skip email for operational success message
+          });
+        }
       } catch (subError) {
         // Don't fail the whole request — address is valid, just not yet monitored.
         // A background job should retry addresses where is_monitored = false.
@@ -232,6 +257,28 @@ export class BTCService {
         );
         savedAddress.is_monitored = false;
         await this.btcAddressRepository.save(savedAddress);
+
+        // Get wallet with user relation to send notification
+        const wallet = await this.btcAddressRepository
+          .createQueryBuilder("btcAddress")
+          .leftJoinAndSelect("btcAddress.wallet", "wallet")
+          .leftJoinAndSelect("wallet.user", "user")
+          .where("btcAddress.id = :addressId", { addressId: savedAddress.id })
+          .getOne();
+
+        if (wallet?.wallet?.user_id) {
+          await this.notificationsService.createNotification({
+            user_id: wallet.wallet.user_id,
+            type: NotificationType.SYSTEM,
+            title: "⚠️ BTC Address Monitoring Failed",
+            message: `Your BTC deposit address ${addressData.address} was created but monitoring failed. Please contact support before sending funds to this address.`,
+            data: { 
+              address: addressData.address,
+              currency: "BTC",
+              error: subError.message 
+            },
+          });
+        }
       }
 
       return this.responseService.success(

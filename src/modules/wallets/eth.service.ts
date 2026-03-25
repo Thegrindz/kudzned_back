@@ -9,6 +9,8 @@ import {
   StandardResponse,
 } from "../../common/services/response.service";
 import { TatumService } from "./tatum.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { NotificationType } from "../../database/entities/notification.entity";
 
 // ─── ETH derivation note ─────────────────────────────────────────────────────
 // ETH_XPUB is at depth 4 (m/44'/60'/0'/0) — the full address-level path.
@@ -32,6 +34,7 @@ export class ETHService {
     private configService: ConfigService,
     private tatumService: TatumService,
     private responseService: ResponseService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async generateAddress(walletId: string): Promise<StandardResponse<any>> {
@@ -66,6 +69,28 @@ export class ETHService {
 
       try {
         await this.tatumService.createSubscription(addressData.address, "ETH");
+        
+        // Get wallet with user relation to send success notification
+        const wallet = await this.ethAddressRepository
+          .createQueryBuilder("ethAddress")
+          .leftJoinAndSelect("ethAddress.wallet", "wallet")
+          .leftJoinAndSelect("wallet.user", "user")
+          .where("ethAddress.id = :addressId", { addressId: savedAddress.id })
+          .getOne();
+
+        if (wallet?.wallet?.user_id) {
+          await this.notificationsService.createNotification({
+            user_id: wallet.wallet.user_id,
+            type: NotificationType.SYSTEM,
+            title: "✅ ETH Address Ready for Deposits",
+            message: `Your ETH deposit address ${addressData.address} is now active and monitored. You can safely send funds to this address.`,
+            data: { 
+              address: addressData.address,
+              currency: "ETH"
+            },
+            skipEmail: true, // Skip email for operational success message
+          });
+        }
       } catch (subError) {
         // Don't fail the whole request — address is valid, just not yet monitored.
         // A background job should retry addresses where is_monitored = false.
@@ -74,6 +99,28 @@ export class ETHService {
         );
         savedAddress.is_monitored = false;
         await this.ethAddressRepository.save(savedAddress);
+
+        // Get wallet with user relation to send notification
+        const wallet = await this.ethAddressRepository
+          .createQueryBuilder("ethAddress")
+          .leftJoinAndSelect("ethAddress.wallet", "wallet")
+          .leftJoinAndSelect("wallet.user", "user")
+          .where("ethAddress.id = :addressId", { addressId: savedAddress.id })
+          .getOne();
+
+        if (wallet?.wallet?.user_id) {
+          await this.notificationsService.createNotification({
+            user_id: wallet.wallet.user_id,
+            type: NotificationType.SYSTEM,
+            title: "⚠️ ETH Address Monitoring Failed",
+            message: `Your ETH deposit address ${addressData.address} was created but monitoring failed. Please contact support before sending funds to this address.`,
+            data: { 
+              address: addressData.address,
+              currency: "ETH",
+              error: subError.message 
+            },
+          });
+        }
       }
 
       return this.responseService.success(
