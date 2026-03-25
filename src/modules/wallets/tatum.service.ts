@@ -119,7 +119,7 @@ export class TatumService {
   // ────────────────────────────────────────────────────────────────────────────
   async createSubscription(address: string, chain: "BTC" | "ETH") {
     try {
-      const webhookUrl = `${this.configService.get("BACKEND_URL")}/wallets/webhooks/tatum`;
+      const webhookUrl = `${this.configService.get("BACKEND_URL")}/api/v1/wallets/webhooks/tatum`;
       
       this.logger.log(`Creating Tatum subscription for ${chain} address: ${address}`);
       this.logger.log(`Webhook URL: ${webhookUrl}`);
