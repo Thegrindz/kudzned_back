@@ -9,18 +9,21 @@ import { ETHService } from "./eth.service";
 import { TatumService } from "./tatum.service";
 import { TransactionService } from "./transaction.service";
 import { NotificationsModule } from "../notifications/notifications.module";
+import { MailModule } from "../../common/mailer/mailer.module";
 
 import { Wallet } from "../../database/entities/wallet.entity";
 import { Transaction } from "../../database/entities/transaction.entity";
 import { BTCAddress } from "../../database/entities/btc-address.entity";
 import { ETHAddress } from "../../database/entities/eth-address.entity";
 import { ResponseService } from "@/common/services/response.service";
+import { MailService } from "@/common/mailer/mailer.service";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Wallet, Transaction, BTCAddress, ETHAddress]),
     HttpModule,
     NotificationsModule,
+    MailModule,
   ],
   controllers: [WalletsController],
   providers: [
@@ -30,6 +33,7 @@ import { ResponseService } from "@/common/services/response.service";
     TatumService,
     TransactionService,
     ResponseService,
+    MailService
   ],
   exports: [WalletsService],
 })

@@ -18,6 +18,7 @@ import { WalletsService } from "../wallets/wallets.service";
 import { ProductsService } from "../products/products.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { FulfillmentService } from "./fulfillment.service";
+import { MailService, OrderConfirmationData } from "../../common/mailer/mailer.service";
 
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { OrderQueryDto } from "./dto/order-query.dto";
@@ -41,6 +42,7 @@ export class OrdersService {
     private notificationsService: NotificationsService,
     private fulfillmentService: FulfillmentService,
     private responseService: ResponseService,
+    private mailService: MailService,
   ) {}
 
   async createOrder(
@@ -99,6 +101,38 @@ export class OrdersService {
         savedOrder.payment_status = PaymentStatus.PAID;
         savedOrder.status = OrderStatus.CONFIRMED;
         await manager.save(savedOrder);
+
+        // Send order confirmation email
+        try {
+          const orderWithUser = await this.orderRepository.findOne({
+            where: { id: savedOrder.id },
+            relations: ["items", "items.product", "user"],
+          });
+
+          if (orderWithUser?.user) {
+            const emailData: OrderConfirmationData = {
+              customerName: `${orderWithUser.user.first_name} ${orderWithUser.user.last_name || ''}`.trim(),
+              customerEmail: orderWithUser.user.email,
+              orderNumber: savedOrder.id,
+              orderDate: new Date().toLocaleDateString(),
+              paymentMethod: "Wallet Balance",
+              transactionId: savedOrder.id,
+              orderItems: orderWithUser.items.map(item => ({
+                name: item.product.title,
+                description: item.product.description || "Digital Product",
+                price: (item.unit_price / 100).toFixed(2),
+              })),
+              subtotal: (savedOrder.total_amount / 100).toFixed(2), // Using total_amount as subtotal since there's no separate subtotal field
+              processingFee: "0.00", // No processing fee mentioned in the order entity
+              totalAmount: (savedOrder.total_amount / 100).toFixed(2),
+            };
+
+            await this.mailService.sendOrderConfirmationMail(orderWithUser.user.email, emailData);
+          }
+        } catch (emailError) {
+          console.error("Failed to send order confirmation email:", emailError);
+          // Don't fail the order if email fails
+        }
 
         // 7. Fulfill digital products
         const fulfillmentResult = await this.fulfillmentService.fulfillOrder(

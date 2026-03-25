@@ -177,6 +177,9 @@ export class TatumService {
           this.logger.error('⏱️ Rate limit exceeded - Too many requests');
         } else if (error.response.status === 400) {
           this.logger.error('📝 Bad request - Check subscription payload format');
+          if (error.response.data?.data?.includes('URL')) {
+            this.logger.error('🌐 Webhook URL format issue - Check BACKEND_URL in .env');
+          }
         }
       } else if (error.request) {
         // The request was made but no response was received

@@ -17,6 +17,7 @@ import { ResponseService } from "../../common/services/response.service";
 import { WalletsModule } from "../wallets/wallets.module";
 import { ProductsModule } from "../products/products.module";
 import { NotificationsModule } from "../notifications/notifications.module";
+import { MailService } from "@/common/mailer/mailer.service";
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import { NotificationsModule } from "../notifications/notifications.module";
     NotificationsModule,
   ],
   controllers: [OrdersController, CartController],
-  providers: [OrdersService, CartService, FulfillmentService, ResponseService],
+  providers: [OrdersService, CartService, FulfillmentService, ResponseService,MailService],
   exports: [OrdersService],
 })
 export class OrdersModule {}

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to SONNET.SHOP</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0a;
+      color: #ffffff;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      border-radius: 20px;
+      border: 1px solid #333333;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      padding: 3rem 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+      animation: float 20s infinite ease-in-out;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      33% { transform: translate(30px, -30px) rotate(120deg); }
+      66% { transform: translate(-20px, 20px) rotate(240deg); }
+    }
+    
+    .logo {
+      position: relative;
+      z-index: 2;
+      margin-bottom: 2rem;
+    }
+    
+    .logo h1 {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 2.5rem;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+    
+    .logo .shop {
+      color: #fbbf24;
+    }
+    
+    .welcome-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 2rem;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 2;
+    }
+    
+    .welcome-icon svg {
+      width: 40px;
+      height: 40px;
+      color: #ffffff;
+    }
+    
+    .pulse-ring {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(1.3); opacity: 0; }
+    }
+    
+    .content {
+      padding: 3rem 2rem;
+      background: #1a1a1a;
+    }
+    
+    .welcome-message {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    
+    .welcome-message h2 {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1.8rem;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+    }
+    
+    .welcome-message p {
+      color: #9ca3af;
+      font-size: 1.1rem;
+    }
+    
+    .message-card {
+      background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+      border: 1px solid #374151;
+      border-radius: 16px;
+      padding: 2rem;
+      margin: 2rem 0;
+    }
+    
+    .message-card p {
+      color: #e5e7eb;
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 1rem;
+    }
+    
+    .message-card p:last-child {
+      margin-bottom: 0;
+    }
+    
+    .highlight {
+      color: #8b5cf6;
+      font-weight: 600;
+    }
+    
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+    
+    .feature {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .feature:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(139, 92, 246, 0.2);
+    }
+    
+    .feature-icon {
+      width: 50px;
+      height: 50px;
+      margin: 0 auto 1rem;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .feature-icon svg {
+      width: 24px;
+      height: 24px;
+      color: #ffffff;
+    }
+    
+    .feature h3 {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+    }
+    
+    .feature p {
+      color: #9ca3af;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: #ffffff;
+      text-decoration: none;
+      padding: 1rem 2.5rem;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 1rem;
+      text-align: center;
+      margin: 2rem 0;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    }
+    
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+    }
+    
+    .footer {
+      background: #0f172a;
+      padding: 2rem;
+      text-align: center;
+      border-top: 1px solid #333333;
+    }
+    
+    .footer-text {
+      color: #9ca3af;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+    
+    .company-name {
+      color: #8b5cf6;
+      font-weight: 600;
+    }
+    
+    .social-links {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    
+    .social-link {
+      width: 40px;
+      height: 40px;
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      text-decoration: none;
+    }
+    
+    .social-link:hover {
+      background: #8b5cf6;
+      border-color: #8b5cf6;
+      transform: translateY(-3px);
+    }
+    
+    .social-link svg {
+      width: 18px;
+      height: 18px;
+      color: #9ca3af;
+      transition: color 0.3s ease;
+    }
+    
+    .social-link:hover svg {
+      color: #ffffff;
+    }
+    
+    .divider {
+      height: 1px;
+      background: linear-gradient(to right, transparent, #374151, transparent);
+      margin: 2rem 0;
+    }
+    
+    @media (max-width: 600px) {
+      .container {
+        margin: 10px;
+        border-radius: 16px;
+      }
+      
+      .header {
+        padding: 2rem 1.5rem;
+      }
+      
+      .logo h1 {
+        font-size: 2rem;
+      }
+      
+      .content {
+        padding: 2rem 1.5rem;
+      }
+      
+      .features {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">
+        <h1>SONNET.<span class="shop">SHOP</span></h1>
+      </div>
+      <div class="welcome-icon">
+        <div class="pulse-ring"></div>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="m22 21-3-3 3-3"/>
+          <path d="M16 11h4"/>
+        </svg>
+      </div>
+    </div>
+    
+    <div class="content">
+      <div class="welcome-message">
+        <h2>Welcome to SONNET.SHOP, ${name}!</h2>
+        <p>Your premium digital marketplace journey begins now</p>
+      </div>
+      
+      <div class="message-card">
+        <p>Dear ${name},</p>
+        <p>
+          Welcome to <span class="highlight">SONNET.SHOP</span>, your premier destination for premium digital products and services! We're thrilled to have you join our community of digital creators, entrepreneurs, and enthusiasts.
+        </p>
+        <p>
+          At SONNET.SHOP, we've crafted a seamless platform where you can discover, purchase, and manage digital assets with confidence. Our cutting-edge wallet system ensures secure transactions, while our curated marketplace offers only the highest quality digital products.
+        </p>
+        <p>
+          Whether you're here to explore our collection or showcase your digital creations, you'll find everything you need in one elegant platform. Get started by exploring our marketplace and setting up your wallet for seamless transactions.
+        </p>
+      </div>
+      
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2"/>
+              <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01"/>
+            </svg>
+          </div>
+          <h3>Premium Marketplace</h3>
+          <p>Discover high-quality digital products from trusted creators</p>
+        </div>
+        
+        <div class="feature">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h8"/>
+              <polyline points="7 8 12 13 17 8"/>
+            </svg>
+          </div>
+          <h3>Secure Wallet</h3>
+          <p>Advanced crypto wallet with multi-currency support</p>
+        </div>
+        
+        <div class="feature">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <h3>Trusted Platform</h3>
+          <p>Enterprise-grade security for your peace of mind</p>
+        </div>
+      </div>
+      
+      <div style="text-align: center;">
+        <a href="https://kudzned.vercel.app" class="cta-button">
+          Start Exploring SONNET.SHOP
+        </a>
+      </div>
+      
+      <div class="divider"></div>
+      
+      <div style="text-align: center; color: #9ca3af; font-size: 0.9rem;">
+        <p>If you have any questions, our support team is here to help you at <span class="highlight">support@sonnet.shop</span></p>
+        <p style="margin-top: 1rem;">We're excited to see what you'll discover on SONNET.SHOP!</p>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p class="footer-text">
+        Best regards,<br>
+        <span class="company-name">The SONNET.SHOP Team</span><br>
+        support@sonnet.shop
+      </p>
+      
+      <div class="social-links">
+        <a href="https://twitter.com" class="social-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/>
+          </svg>
+        </a>
+        <a href="https://discord.com" class="social-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2.5-1.5-2.5s"/>
+            <path d="M15.5 14.5A2.5 2.5 0 0 1 13 12c0-1.38.5-2.5 1.5-2.5s1.5 1.12 1.5 2.5"/>
+            <path d="M9 12c0 1.38.5 2.5 1.5 2.5"/>
+            <path d="M15 12c0 1.38-.5 2.5-1.5 2.5"/>
+          </svg>
+        </a>
+        <a href="https://github.com" class="social-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+          </svg>
+        </a>
+      </div>
+      
+      <p style="margin-top: 2rem; font-size: 0.8rem; color: #6b7280;">
+        © 2025 SONNET.SHOP. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

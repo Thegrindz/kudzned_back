@@ -19,6 +19,7 @@ import { ETHService } from "./eth.service";
 import { TatumService } from "./tatum.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { NotificationType } from "../../database/entities/notification.entity";
+import { MailService, WalletFundingData } from "../../common/mailer/mailer.service";
 
 // ─── Balance storage convention ──────────────────────────────────────────────
 // All wallet balances are stored in USD CENTS (integer).
@@ -59,6 +60,7 @@ export class WalletsService {
     private tatumService: TatumService,
     private notificationsService: NotificationsService,
     private responseService: ResponseService,
+    private mailService: MailService,
   ) {}
 
   async getWalletByUserId(userId: string): Promise<StandardResponse<any>> {
@@ -459,6 +461,37 @@ export class WalletsService {
             address 
           },
         });
+
+        // Send wallet funding email
+        try {
+          const exchangeRate = currency === "BTC" 
+            ? await this.tatumService.getExchangeRate("BTC", "USD")
+            : await this.tatumService.getExchangeRate("ETH", "USD");
+
+          // Get user details for email
+          const userWallet = await this.walletRepository.findOne({
+            where: { id: wallet.id },
+            relations: ["user"],
+          });
+
+          if (userWallet?.user) {
+            const emailData: WalletFundingData = {
+              recipientName: userWallet.user.first_name ? `${userWallet.user.first_name} ${userWallet.user.last_name || ''}`.trim() : "Valued Customer",
+              amount: (usdCents / 100).toFixed(2),
+              cryptoCurrency: currency,
+              cryptoAmount: amount.toString(),
+              exchangeRate: exchangeRate || "N/A",
+              cryptoAddress: address,
+              transactionReference: txHash,
+              processedDate: new Date().toLocaleDateString(),
+            };
+
+            await this.mailService.sendWalletFundedMail(userWallet.user.email, emailData);
+          }
+        } catch (emailError) {
+          console.error("Failed to send wallet funding email:", emailError);
+          // Don't fail the deposit if email fails
+        }
       }
 
       return this.responseService.success(

@@ -13,6 +13,8 @@ import { User } from "../../database/entities/user.entity";
 import { UsersModule } from "../users/users.module";
 import { ResponseService } from "../../common/services/response.service";
 import { NotificationsModule } from "../notifications/notifications.module";
+import { MailModule } from "../../common/mailer/mailer.module";
+import { MailService } from "@/common/mailer/mailer.service";
 
 @Module({
   imports: [
@@ -27,9 +29,10 @@ import { NotificationsModule } from "../notifications/notifications.module";
     }),
     UsersModule,
     NotificationsModule,
+    MailModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, LocalStrategy, ResponseService],
+  providers: [AuthService, JwtStrategy, LocalStrategy, ResponseService,MailService],
   exports: [AuthService],
 })
 export class AuthModule {}

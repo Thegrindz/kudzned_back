@@ -21,6 +21,7 @@ import { LoginDto } from "./dto/login.dto";
 import { TwoFADto } from "./dto/two-fa.dto";
 import { NotificationsService } from "../notifications/notifications.service";
 import { NotificationType } from "../../database/entities/notification.entity";
+import { MailService } from "../../common/mailer/mailer.service";
 
 @Injectable()
 export class AuthService {
@@ -31,6 +32,7 @@ export class AuthService {
     private jwtService: JwtService,
     private responseService: ResponseService,
     private notificationsService: NotificationsService,
+    private mailService: MailService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<StandardResponse<any>> {
@@ -104,10 +106,21 @@ export class AuthService {
       await this.notificationsService.createNotification({
         user_id: savedUser.id,
         type: NotificationType.SIGNUP_SUCCESS,
-        title: "Welcome to KUDZNED!",
+        title: "Welcome to SONNET.SHOP!",
         message: "Your account has been successfully created.",
         skipEmail: true,
       });
+
+      // Send welcome email
+      try {
+        await this.mailService.sendWelcomeMail(
+          savedUser.email,
+          `${savedUser.first_name} ${savedUser.last_name}`,
+        );
+      } catch (emailError) {
+        console.error("Failed to send welcome email:", emailError);
+        // Don't fail the registration if email fails
+      }
 
       return this.responseService.created(
         "User registered successfully",
