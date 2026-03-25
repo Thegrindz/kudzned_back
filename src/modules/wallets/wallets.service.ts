@@ -525,7 +525,7 @@ export class WalletsService {
   async getTransactions(
     userId: string,
     page = 1,
-    limit = 20,
+    limit = 50,
   ): Promise<StandardResponse<any>> {
     try {
       const walletResponse = await this.getWalletByUserId(userId);

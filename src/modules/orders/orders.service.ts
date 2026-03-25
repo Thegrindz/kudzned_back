@@ -23,11 +23,17 @@ import { MailService, OrderConfirmationData } from "../../common/mailer/mailer.s
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { OrderQueryDto } from "./dto/order-query.dto";
 
+// ─── Price convention ────────────────────────────────────────────────────────
+// Product prices are stored in USD CENTS in the DB (e.g. $0.10 = 10 cents).
+// Wallet balances are also in USD CENTS.
+// All arithmetic here stays in cents — never divide until displaying to user.
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface ValidatedItem {
   productId: string;
   quantity: number;
-  unitPrice: number;
-  totalPrice: number;
+  unitPrice: number;  // cents
+  totalPrice: number; // cents
 }
 
 @Injectable()
@@ -50,121 +56,138 @@ export class OrdersService {
     createOrderDto: CreateOrderDto,
   ): Promise<StandardResponse<Order>> {
     try {
-      return await this.orderRepository.manager.transaction(async (manager) => {
-        // 1. Validate cart items and calculate total
-        const { items, totalAmount } = await this.validateCartItems(
-          createOrderDto.items,
-        );
+      // ── Step 1: Validate cart items and calculate total IN CENTS ─────────
+      const { items, totalAmount } = await this.validateCartItems(
+        createOrderDto.items,
+      );
 
-        // 2. Check wallet balance
-        const hasBalance = await this.walletsService.checkBalance(
-          userId,
-          totalAmount,
+      // ── Step 2: Check wallet balance ─────────────────────────────────────
+      const hasBalance = await this.walletsService.checkBalance(
+        userId,
+        totalAmount, // cents
+      );
+      if (!hasBalance) {
+        return this.responseService.badRequest(
+          `Insufficient wallet balance. Required: $${(totalAmount / 100).toFixed(2)}`,
         );
-        if (!hasBalance) {
-          return this.responseService.badRequest("Insufficient wallet balance");
+      }
+
+      // ── Step 3: Deduct balance FIRST (outside the order transaction) ─────
+      // FIX — deductBalance opens its own transaction internally.
+      // Calling it inside another transaction causes a deadlock and the
+      // request hangs forever. We deduct first, then create the order.
+      const deductResponse = await this.walletsService.deductBalance(
+        userId,
+        totalAmount, // cents
+        "pending", // temporary placeholder, updated after order is created
+      );
+
+      if (!deductResponse.success) {
+        // Balance check passed but deduction failed — return the error
+        return deductResponse as any;
+      }
+
+      // ── Step 4: Create the order and items ───────────────────────────────
+      let savedOrder: Order;
+      try {
+        savedOrder = await this.orderRepository.manager.transaction(
+          async (manager) => {
+            const order = manager.create(Order, {
+              user_id: userId,
+              total_amount: totalAmount, // cents
+              status: OrderStatus.PENDING,
+              payment_status: PaymentStatus.PAID,
+              expires_at: new Date(Date.now() + 30 * 60 * 1000), // 30 min
+            });
+
+            const createdOrder = await manager.save(order);
+
+            const orderItems = items.map((item) =>
+              manager.create(OrderItem, {
+                order_id: createdOrder.id,
+                product_id: item.productId,
+                quantity: item.quantity,
+                unit_price: item.unitPrice,   // cents
+                total_price: item.totalPrice, // cents
+              }),
+            );
+
+            await manager.save(orderItems);
+
+            createdOrder.status = OrderStatus.CONFIRMED;
+            return manager.save(createdOrder);
+          },
+        );
+      } catch (orderError) {
+        // Order creation failed after balance was already deducted — refund it
+        await this.walletsService.refund(userId, totalAmount, "order-failed");
+        throw orderError;
+      }
+
+      // ── Step 5: Fulfill digital products ─────────────────────────────────
+      const fulfillmentResult =
+        await this.fulfillmentService.fulfillOrder(savedOrder.id);
+
+      if (fulfillmentResult.success) {
+        savedOrder.fulfillment_status = FulfillmentStatus.FULFILLED;
+        savedOrder.status = OrderStatus.COMPLETED;
+
+        for (const item of items) {
+          await this.productsService.incrementSales(item.productId);
         }
+      } else {
+        // Fulfillment failed — refund the customer and mark order failed
+        await this.walletsService.refund(userId, totalAmount, savedOrder.id);
+        savedOrder.status = OrderStatus.FAILED;
+      }
 
-        // 3. Create order
-        const order = manager.create(Order, {
-          user_id: userId,
-          total_amount: totalAmount,
-          status: OrderStatus.PENDING,
-          expires_at: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
+      await this.orderRepository.save(savedOrder);
+
+      // ── Step 6: Send confirmation email ──────────────────────────────────
+      try {
+        const orderWithUser = await this.orderRepository.findOne({
+          where: { id: savedOrder.id },
+          relations: ["items", "items.product", "user"],
         });
 
-        const savedOrder = await manager.save(order);
-        // 4. Create order items
-        const orderItems = items.map((item) =>
-          manager.create(OrderItem, {
-            order_id: savedOrder.id,
-            product_id: item.productId,
-            quantity: item.quantity,
-            unit_price: item.unitPrice,
-            total_price: item.totalPrice,
-          }),
-        );
-
-        await manager.save(orderItems);
-
-        // 5. Process payment
-        const deductResponse = await this.walletsService.deductBalance(
-          userId,
-          totalAmount,
-          savedOrder.id,
-        );
-        if (!deductResponse.success) {
-          throw new Error("Payment processing failed");
+        if (orderWithUser?.user) {
+          const emailData: OrderConfirmationData = {
+            customerName: `${orderWithUser.user.first_name} ${orderWithUser.user.last_name || ""}`.trim(),
+            customerEmail: orderWithUser.user.email,
+            orderNumber: savedOrder.id,
+            orderDate: new Date().toLocaleDateString(),
+            paymentMethod: "Wallet Balance",
+            transactionId: savedOrder.id,
+            orderItems: orderWithUser.items.map((item) => ({
+              name: item.product.title,
+              description: item.product.description || "Digital Product",
+              // Display only — convert cents to dollars here
+              price: (item.unit_price / 100).toFixed(2),
+            })),
+            subtotal: (savedOrder.total_amount / 100).toFixed(2),
+            processingFee: "0.00",
+            totalAmount: (savedOrder.total_amount / 100).toFixed(2),
+          };
+          await this.mailService.sendOrderConfirmationMail(
+            orderWithUser.user.email,
+            emailData,
+          );
         }
+      } catch (emailError) {
+        // Never fail the order because of an email error
+        console.error("Failed to send order confirmation email:", emailError);
+      }
 
-        // 6. Update order status
-        savedOrder.payment_status = PaymentStatus.PAID;
-        savedOrder.status = OrderStatus.CONFIRMED;
-        await manager.save(savedOrder);
+      // ── Step 7: Send in-app notification ─────────────────────────────────
+      await this.notificationsService.sendOrderNotification(
+        userId,
+        savedOrder,
+      );
 
-        // Send order confirmation email
-        try {
-          const orderWithUser = await manager.findOne(Order, {
-            where: { id: savedOrder.id },
-            relations: ["items", "items.product", "user"],
-          });
-
-          if (orderWithUser?.user) {
-            const emailData: OrderConfirmationData = {
-              customerName: `${orderWithUser.user.first_name} ${orderWithUser.user.last_name || ''}`.trim(),
-              customerEmail: orderWithUser.user.email,
-              orderNumber: savedOrder.id,
-              orderDate: new Date().toLocaleDateString(),
-              paymentMethod: "Wallet Balance",
-              transactionId: savedOrder.id,
-              orderItems: orderWithUser.items.map(item => ({
-                name: item.product.title,
-                description: item.product.description || "Digital Product",
-                price: (item.unit_price / 100).toFixed(2),
-              })),
-              subtotal: (savedOrder.total_amount / 100).toFixed(2), // Using total_amount as subtotal since there's no separate subtotal field
-              processingFee: "0.00", // No processing fee mentioned in the order entity
-              totalAmount: (savedOrder.total_amount / 100).toFixed(2),
-            };
-
-            await this.mailService.sendOrderConfirmationMail(orderWithUser.user.email, emailData);
-          }
-        } catch (emailError) {
-          console.error("Failed to send order confirmation email:", emailError);
-          // Don't fail the order if email fails
-        }
-
-        // 7. Fulfill digital products
-        const fulfillmentResult = await this.fulfillmentService.fulfillOrder(
-          savedOrder.id,
-        );
-        if (fulfillmentResult.success) {
-          savedOrder.fulfillment_status = FulfillmentStatus.FULFILLED;
-          savedOrder.status = OrderStatus.COMPLETED;
-
-          // Update product sales count
-          for (const item of items) {
-            await this.productsService.incrementSales(item.productId);
-          }
-        } else {
-          // Refund on fulfillment failure
-          await this.walletsService.refund(userId, totalAmount, savedOrder.id);
-          savedOrder.status = OrderStatus.FAILED;
-        }
-
-        await manager.save(savedOrder);
-
-        // 8. Send notification
-        await this.notificationsService.sendOrderNotification(
-          userId,
-          savedOrder,
-        );
-
-        return this.responseService.created(
-          "Order created successfully",
-          savedOrder,
-        );
-      });
+      return this.responseService.created(
+        "Order created successfully",
+        savedOrder,
+      );
     } catch (error) {
       return this.responseService.internalServerError(
         "Failed to create order",
@@ -175,7 +198,7 @@ export class OrdersService {
 
   private async validateCartItems(items: any[]): Promise<{
     items: ValidatedItem[];
-    totalAmount: number;
+    totalAmount: number; // cents
   }> {
     let totalAmount = 0;
     const validatedItems: ValidatedItem[] = [];
@@ -184,6 +207,7 @@ export class OrdersService {
       const productResponse = await this.productsService.findById(
         item.productId,
       );
+
       if (
         !productResponse.success ||
         !productResponse.data ||
@@ -193,14 +217,20 @@ export class OrdersService {
       }
 
       const product = productResponse.data;
-      const itemTotal = product.price * item.quantity;
-      totalAmount += itemTotal;
+
+      // FIX — product.price must be in cents in the DB.
+      // If your products are currently stored in dollars (e.g. 0.10),
+      // you need to migrate them to cents (10) in the database.
+      // All arithmetic here assumes cents.
+      const unitPriceCents = product.price; // must already be in cents
+      const itemTotalCents = unitPriceCents * item.quantity;
+      totalAmount += itemTotalCents;
 
       validatedItems.push({
         productId: item.productId,
         quantity: item.quantity,
-        unitPrice: product.price,
-        totalPrice: itemTotal,
+        unitPrice: unitPriceCents,
+        totalPrice: itemTotalCents,
       });
     }
 
@@ -258,10 +288,7 @@ export class OrdersService {
         return this.responseService.notFound("Order not found");
       }
 
-      return this.responseService.success(
-        "Order retrieved successfully",
-        order,
-      );
+      return this.responseService.success("Order retrieved successfully", order);
     } catch (error) {
       return this.responseService.internalServerError(
         "Failed to retrieve order",
@@ -276,9 +303,7 @@ export class OrdersService {
   ): Promise<StandardResponse<Order>> {
     try {
       const orderResponse = await this.getOrder(userId, orderId);
-      if (!orderResponse.success) {
-        return orderResponse;
-      }
+      if (!orderResponse.success) return orderResponse;
 
       const order = orderResponse.data;
 
@@ -286,7 +311,6 @@ export class OrdersService {
         return this.responseService.badRequest("Order cannot be cancelled");
       }
 
-      // Refund if payment was processed
       if (order.payment_status === PaymentStatus.PAID) {
         await this.walletsService.refund(userId, order.total_amount, orderId);
       }
@@ -323,10 +347,7 @@ export class OrdersService {
         return this.responseService.notFound("Order not found");
       }
 
-      return this.responseService.success(
-        "Order retrieved successfully",
-        order,
-      );
+      return this.responseService.success("Order retrieved successfully", order);
     } catch (error) {
       return this.responseService.internalServerError(
         "Failed to retrieve order",
