@@ -104,7 +104,7 @@ export class OrdersService {
 
         // Send order confirmation email
         try {
-          const orderWithUser = await this.orderRepository.findOne({
+          const orderWithUser = await manager.findOne(Order, {
             where: { id: savedOrder.id },
             relations: ["items", "items.product", "user"],
           });
