@@ -7,6 +7,8 @@ import { OrderItem } from "../../database/entities/order-item.entity";
 import { Wallet } from "../../database/entities/wallet.entity";
 import { Transaction } from "../../database/entities/transaction.entity";
 import { DownloadLink } from "../../database/entities/download-link.entity";
+import { Cart } from "../../database/entities/cart.entity";
+import { CartItem } from "../../database/entities/cart-item.entity";
 import {
   OrderStatus,
   PaymentStatus,
@@ -55,6 +57,10 @@ export class OrdersService {
     private transactionRepository: Repository<Transaction>,
     @InjectRepository(DownloadLink)
     private downloadLinkRepository: Repository<DownloadLink>,
+    @InjectRepository(Cart)
+    private cartRepository: Repository<Cart>,
+    @InjectRepository(CartItem)
+    private cartItemRepository: Repository<CartItem>,
     private dataSource: DataSource,
     private notificationsService: NotificationsService,
     private responseService: ResponseService,
@@ -150,6 +156,15 @@ export class OrdersService {
         // Increment product sales count
         item.product.sales_count = (item.product.sales_count || 0) + item.quantity;
         await queryRunner.manager.save(item.product);
+      }
+
+      // ── Step 8: Clear the user's cart ────────────────────────────────────
+      const cart = await queryRunner.manager.findOne(Cart, {
+        where: { user_id: userId },
+      });
+      if (cart) {
+        // Delete all cart items
+        await queryRunner.manager.delete(CartItem, { cart_id: cart.id });
       }
 
       // Commit transaction
