@@ -101,7 +101,7 @@ export class ProductsService {
     try {
       const product = await this.productRepository.findOne({
         where: { id },
-        relations: ["category", "vendor", "digital_files"],
+        relations: ["category", "vendor", "digital_files", "order_items"],
       });
 
       if (!product) {
@@ -465,6 +465,18 @@ export class ProductsService {
         return this.responseService.forbidden(
           "You can only delete your own products",
         );
+      }
+
+      // Check if product has been ordered - prevent deletion if it has order history
+      if (product.order_items && product.order_items.length > 0) {
+        return this.responseService.badRequest(
+          "Cannot delete product with existing orders. Consider marking it as inactive instead.",
+        );
+      }
+
+      // Delete related digital files first
+      if (product.digital_files && product.digital_files.length > 0) {
+        await this.digitalFileRepository.delete({ product_id: id });
       }
 
       await this.productRepository.delete(id);
