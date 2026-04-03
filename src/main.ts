@@ -28,6 +28,10 @@ async function bootstrap() {
       "http://localhost:5173",
       "http://localhost:5175",
       "https://kudzned.vercel.app",
+      "https://sonnet-am3.pages.dev/login",
+      "https://sonnet.biz",
+      "https://www.sonnet.biz",
+      "www.sonnet.biz"
     ],
     credentials: true,
   });
